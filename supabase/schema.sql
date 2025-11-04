@@ -1,0 +1,345 @@
+-- Profiles (extend auth.users)
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text unique,
+  full_name text,
+  avatar_url text,
+  bio text,
+  created_at timestamptz default now()
+);
+
+alter table public.profiles enable row level security;
+create policy "profiles are readable by everyone" on public.profiles for select using (true);
+create policy "users can update own profile" on public.profiles for update using (auth.uid() = id);
+create policy "insert own profile" on public.profiles for insert with check (auth.uid() = id);
+
+-- Teams
+create table if not exists public.teams (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references auth.users(id) on delete set null,
+  name text not null,
+  game text not null,
+  logo_url text,
+  description text,
+  recruiting boolean default false,
+  created_at timestamptz default now()
+);
+
+alter table public.teams enable row level security;
+create policy "teams readable" on public.teams for select using (true);
+create policy "team owners can modify" on public.teams for update using (auth.uid() = owner_id);
+create policy "authenticated can create team" on public.teams for insert with check (auth.role() = 'authenticated');
+
+-- Team members
+create table if not exists public.team_members (
+  team_id uuid references public.teams(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  role text default 'member',
+  joined_at timestamptz default now(),
+  primary key (team_id, user_id)
+);
+
+alter table public.team_members enable row level security;
+create policy "memberships readable" on public.team_members for select using (true);
+create policy "team owners can manage members" on public.team_members for all using (
+  exists (select 1 from public.teams t where t.id = team_id and t.owner_id = auth.uid())
+);
+
+-- Events / Tournaments
+create table if not exists public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  image_url text,
+  location text,
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  max_participants int,
+  price_cents int default 0,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+alter table public.events enable row level security;
+create policy "events readable" on public.events for select using (true);
+create policy "event creators can modify" on public.events for update using (auth.uid() = created_by);
+create policy "authenticated can create events" on public.events for insert with check (auth.role() = 'authenticated');
+
+-- Event registrations
+create table if not exists public.event_registrations (
+  event_id uuid references public.events(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  status text default 'registered',
+  created_at timestamptz default now(),
+  primary key (event_id, user_id)
+);
+
+alter table public.event_registrations enable row level security;
+create policy "registrations readable" on public.event_registrations for select using (true);
+create policy "users manage own registration" on public.event_registrations for all using (auth.uid() = user_id);
+
+-- Helper view: event stats
+create or replace view public.event_stats as
+select e.id as event_id,
+       count(r.user_id) as participants
+from public.events e
+left join public.event_registrations r on r.event_id = e.id
+group by e.id;
+
+-- User roles and permissions
+create table if not exists public.user_roles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  role text not null check (role in ('admin', 'moderator', 'vip', 'user')),
+  granted_by uuid references auth.users(id) on delete set null,
+  granted_at timestamptz default now(),
+  unique(user_id, role)
+);
+
+alter table public.user_roles enable row level security;
+create policy "roles readable by admins" on public.user_roles for select using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+create policy "admins can manage roles" on public.user_roles for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Content management (blog, articles, news)
+create table if not exists public.content (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  slug text unique not null,
+  content text not null,
+  excerpt text,
+  featured_image text,
+  type text not null check (type in ('blog', 'news', 'article', 'page')),
+  status text default 'draft' check (status in ('draft', 'published', 'archived')),
+  author_id uuid references auth.users(id) on delete set null,
+  published_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.content enable row level security;
+create policy "published content readable" on public.content for select using (status = 'published' or auth.uid() = author_id);
+create policy "authors can manage own content" on public.content for all using (auth.uid() = author_id);
+create policy "admins can manage all content" on public.content for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Media management
+create table if not exists public.media (
+  id uuid primary key default gen_random_uuid(),
+  filename text not null,
+  original_name text not null,
+  mime_type text not null,
+  size_bytes bigint not null,
+  url text not null,
+  alt_text text,
+  uploaded_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+alter table public.media enable row level security;
+create policy "media readable" on public.media for select using (true);
+create policy "authenticated can upload media" on public.media for insert with check (auth.role() = 'authenticated');
+create policy "uploaders can manage own media" on public.media for all using (auth.uid() = uploaded_by);
+
+-- Forum categories
+create table if not exists public.forum_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  slug text unique not null,
+  color text default '#3b82f6',
+  icon text,
+  sort_order int default 0,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+alter table public.forum_categories enable row level security;
+create policy "categories readable" on public.forum_categories for select using (is_active = true);
+create policy "admins can manage categories" on public.forum_categories for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Forum topics
+create table if not exists public.forum_topics (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid references public.forum_categories(id) on delete cascade,
+  title text not null,
+  content text not null,
+  author_id uuid references auth.users(id) on delete set null,
+  is_pinned boolean default false,
+  is_locked boolean default false,
+  view_count int default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.forum_topics enable row level security;
+create policy "topics readable" on public.forum_topics for select using (true);
+create policy "authenticated can create topics" on public.forum_topics for insert with check (auth.role() = 'authenticated');
+create policy "authors can edit own topics" on public.forum_topics for update using (auth.uid() = author_id);
+create policy "moderators can manage topics" on public.forum_topics for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role in ('admin', 'moderator'))
+);
+
+-- Forum replies
+create table if not exists public.forum_replies (
+  id uuid primary key default gen_random_uuid(),
+  topic_id uuid references public.forum_topics(id) on delete cascade,
+  content text not null,
+  author_id uuid references auth.users(id) on delete set null,
+  parent_id uuid references public.forum_replies(id) on delete cascade,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.forum_replies enable row level security;
+create policy "replies readable" on public.forum_replies for select using (true);
+create policy "authenticated can reply" on public.forum_replies for insert with check (auth.role() = 'authenticated');
+create policy "authors can edit own replies" on public.forum_replies for update using (auth.uid() = author_id);
+create policy "moderators can manage replies" on public.forum_replies for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role in ('admin', 'moderator'))
+);
+
+-- Team achievements
+create table if not exists public.team_achievements (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid references public.teams(id) on delete cascade,
+  title text not null,
+  description text,
+  achievement_date date not null,
+  rank_position int,
+  prize_amount decimal(10,2),
+  tournament_name text,
+  created_at timestamptz default now()
+);
+
+alter table public.team_achievements enable row level security;
+create policy "achievements readable" on public.team_achievements for select using (true);
+create policy "team owners can manage achievements" on public.team_achievements for all using (
+  exists (select 1 from public.teams t where t.id = team_id and t.owner_id = auth.uid())
+);
+
+-- User reports and moderation
+create table if not exists public.user_reports (
+  id uuid primary key default gen_random_uuid(),
+  reported_user_id uuid references auth.users(id) on delete cascade,
+  reporter_id uuid references auth.users(id) on delete set null,
+  reason text not null,
+  description text,
+  status text default 'pending' check (status in ('pending', 'reviewed', 'resolved', 'dismissed')),
+  reviewed_by uuid references auth.users(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz default now()
+);
+
+alter table public.user_reports enable row level security;
+create policy "moderators can view reports" on public.user_reports for select using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role in ('admin', 'moderator'))
+);
+create policy "authenticated can report users" on public.user_reports for insert with check (auth.role() = 'authenticated');
+create policy "moderators can manage reports" on public.user_reports for update using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role in ('admin', 'moderator'))
+);
+
+-- Website settings
+create table if not exists public.website_settings (
+  key text primary key,
+  value jsonb not null,
+  description text,
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz default now()
+);
+
+alter table public.website_settings enable row level security;
+create policy "settings readable" on public.website_settings for select using (true);
+create policy "admins can manage settings" on public.website_settings for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Notifications
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  title text not null,
+  message text not null,
+  type text not null check (type in ('info', 'success', 'warning', 'error')),
+  is_read boolean default false,
+  action_url text,
+  created_at timestamptz default now()
+);
+
+alter table public.notifications enable row level security;
+create policy "users can view own notifications" on public.notifications for select using (auth.uid() = user_id);
+create policy "users can update own notifications" on public.notifications for update using (auth.uid() = user_id);
+create policy "admins can create notifications" on public.notifications for insert with check (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Website analytics
+create table if not exists public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null,
+  page_path text,
+  user_id uuid references auth.users(id) on delete set null,
+  session_id text,
+  ip_address inet,
+  user_agent text,
+  referrer text,
+  metadata jsonb,
+  created_at timestamptz default now()
+);
+
+alter table public.analytics_events enable row level security;
+create policy "admins can view analytics" on public.analytics_events for select using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Functions and triggers
+create or replace function public.update_updated_at_column()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- Add updated_at triggers
+create trigger update_content_updated_at before update on public.content
+  for each row execute procedure public.update_updated_at_column();
+
+create trigger update_forum_topics_updated_at before update on public.forum_topics
+  for each row execute procedure public.update_updated_at_column();
+
+create trigger update_forum_replies_updated_at before update on public.forum_replies
+  for each row execute procedure public.update_updated_at_column();
+
+-- Insert default admin role for first user
+insert into public.website_settings (key, value, description) values
+('site_name', '"Esports Community"', 'Website name'),
+('site_description', '"Platform komunitas esports terbaik"', 'Website description'),
+('maintenance_mode', 'false', 'Enable/disable maintenance mode'),
+('registration_enabled', 'true', 'Enable/disable user registration'),
+('max_file_size', '10485760', 'Maximum file upload size in bytes (10MB)'),
+('allowed_file_types', '["image/jpeg", "image/png", "image/gif", "image/webp"]', 'Allowed file MIME types')
+on conflict (key) do nothing;
+
+-- Schema adjustments to align with implemented APIs
+-- Media: add description, file_path, and updated_at for metadata and storage management
+alter table if exists public.media
+  add column if not exists description text,
+  add column if not exists file_path text,
+  add column if not exists updated_at timestamptz default now();
+
+-- Forum topics: add slug and last_reply_at to support URL slugs and reply tracking
+alter table if exists public.forum_topics
+  add column if not exists slug text unique,
+  add column if not exists last_reply_at timestamptz;
+
+-- Events: add game to support analytics on game popularity
+alter table if exists public.events
+  add column if not exists game text;
