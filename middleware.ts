@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -29,6 +30,21 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req });
   const isAuthenticated = !!token;
 
+  // Helper: cek role user via Supabase
+  async function getUserRoles(userId?: string): Promise<string[]> {
+    if (!userId) return [];
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    if (error || !data) return [];
+    return data.map((r: any) => r.role);
+  }
+
   // Redirect logic
   if (isPublicPath) {
     // If user is on login/register page but already authenticated, redirect to dashboard
@@ -43,6 +59,25 @@ export async function middleware(req: NextRequest) {
   // If user is trying to access protected path but not authenticated, redirect to login
   if (isProtectedPath && !isAuthenticated) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Enforce admin-only access for /admin routes
+  if (path.startsWith("/admin")) {
+    const roles = await getUserRoles(token?.sub as string | undefined);
+    const isAdminOrModerator = roles.includes("admin") || roles.includes("moderator");
+    if (!isAdminOrModerator) {
+      // Non-admin trying to access admin area -> redirect to user dashboard
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+  }
+
+  // Redirect admin users opening /dashboard to /admin
+  if (path.startsWith("/dashboard") && isAuthenticated) {
+    const roles = await getUserRoles(token?.sub as string | undefined);
+    const isAdminOrModerator = roles.includes("admin") || roles.includes("moderator");
+    if (isAdminOrModerator) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
   }
 
   // For all other cases, proceed normally

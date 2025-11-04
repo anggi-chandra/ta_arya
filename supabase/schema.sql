@@ -343,3 +343,109 @@ alter table if exists public.forum_topics
 -- Events: add game to support analytics on game popularity
 alter table if exists public.events
   add column if not exists game text;
+
+-- Notification functions and triggers
+-- Create notifications automatically when important rows are inserted
+
+-- Event registration notification
+create or replace function public.notify_event_registration()
+returns trigger as $$
+declare
+  notif_title text;
+  notif_message text;
+  action_link text;
+begin
+  notif_title := 'Pendaftaran Berhasil';
+  notif_message := 'Kamu berhasil mendaftar ke event.';
+  action_link := '/events/' || NEW.event_id::text;
+
+  insert into public.notifications (user_id, title, message, type, is_read, action_url)
+  values (NEW.user_id, notif_title, notif_message, 'success', false, action_link);
+
+  return NEW;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_notify_event_registration on public.event_registrations;
+create trigger trg_notify_event_registration
+after insert on public.event_registrations
+for each row execute procedure public.notify_event_registration();
+
+-- Team member join notification
+create or replace function public.notify_team_member_join()
+returns trigger as $$
+declare
+  team_owner uuid;
+  team_name text;
+begin
+  select t.owner_id, t.name into team_owner, team_name
+  from public.teams t
+  where t.id = NEW.team_id;
+
+  -- Notify team owner about new member
+  if team_owner is not null then
+    insert into public.notifications (user_id, title, message, type, is_read, action_url)
+    values (
+      team_owner,
+      'Anggota Baru Bergabung',
+      coalesce(team_name, 'Tim') || ': anggota baru telah bergabung.',
+      'info',
+      false,
+      '/teams/' || NEW.team_id::text
+    );
+  end if;
+
+  -- Notify joining user
+  insert into public.notifications (user_id, title, message, type, is_read, action_url)
+  values (
+    NEW.user_id,
+    'Berhasil Bergabung Tim',
+    'Kamu bergabung ke tim ' || coalesce(team_name, '') || '.',
+    'success',
+    false,
+    '/teams/' || NEW.team_id::text
+  );
+
+  return NEW;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_notify_team_member_join on public.team_members;
+create trigger trg_notify_team_member_join
+after insert on public.team_members
+for each row execute procedure public.notify_team_member_join();
+
+-- Forum reply notification (notify topic author)
+create or replace function public.notify_forum_reply()
+returns trigger as $$
+declare
+  topic_author uuid;
+  topic_title text;
+  category_id uuid;
+  action_link text;
+begin
+  select ft.author_id, ft.title, ft.category_id into topic_author, topic_title, category_id
+  from public.forum_topics ft
+  where ft.id = NEW.topic_id;
+
+  if topic_author is not null then
+    action_link := '/community/forum/' || category_id::text || '/' || NEW.topic_id::text;
+    insert into public.notifications (user_id, title, message, type, is_read, action_url)
+    values (
+      topic_author,
+      'Balasan Baru di Topik',
+      'Topik "' || coalesce(topic_title, '') || '" mendapat balasan baru.',
+      'info',
+      false,
+      action_link
+    );
+  end if;
+
+  return NEW;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_notify_forum_reply on public.forum_replies;
+create trigger trg_notify_forum_reply
+after insert on public.forum_replies
+for each row execute procedure public.notify_forum_reply();

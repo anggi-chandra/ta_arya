@@ -94,6 +94,12 @@ export default function AdminDashboard() {
           <Link href="/admin/content">
             <Button>Manajemen Konten</Button>
           </Link>
+          <Link href="/admin/settings">
+            <Button>Pengaturan</Button>
+          </Link>
+          <Link href="/">
+            <Button>Kembali ke Beranda</Button>
+          </Link>
         </div>
       </div>
 
