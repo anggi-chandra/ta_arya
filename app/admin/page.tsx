@@ -91,6 +91,9 @@ export default function AdminDashboard() {
           <Link href="/admin/events">
             <Button>Kelola Event</Button>
           </Link>
+          <Link href="/admin/teams">
+            <Button>Kelola Tim</Button>
+          </Link>
           <Link href="/admin/content">
             <Button>Manajemen Konten</Button>
           </Link>
