@@ -445,7 +445,7 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
-drop trigger if not exists trg_notify_forum_reply on public.forum_replies;
+DROP TRIGGER IF EXISTS trg_notify_forum_reply ON public.forum_replies;
 create trigger trg_notify_forum_reply
 after insert on public.forum_replies
 for each row execute procedure public.notify_forum_reply();

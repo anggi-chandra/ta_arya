@@ -68,6 +68,7 @@ export default function AdminTournamentsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newLocation, setNewLocation] = useState("");
   const [newGame, setNewGame] = useState("");
   const [newStartsAt, setNewStartsAt] = useState("");
@@ -80,6 +81,7 @@ export default function AdminTournamentsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editLocation, setEditLocation] = useState("");
   const [editGame, setEditGame] = useState("");
   const [editStartsAt, setEditStartsAt] = useState("");
@@ -93,23 +95,46 @@ export default function AdminTournamentsPage() {
     queryFn: () => fetchAdminTournaments(page, limit, search, status),
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        throw new Error('Gagal mengunggah gambar');
+      }
+      const data = await res.json();
+      return data.publicUrl;
+    },
+  });
+
   const createMutation = useMutation({
-    mutationFn: () => createTournament({
-      title: newTitle,
-      description: newDescription || undefined,
-      image_url: newImageUrl || undefined,
-      location: newLocation || undefined,
-      game: newGame || undefined,
-      starts_at: newStartsAt || undefined,
-      ends_at: newEndsAt || undefined,
-      max_participants: typeof newMaxParticipants === "number" ? newMaxParticipants : undefined,
-      price_cents: typeof newPriceCents === "number" ? newPriceCents : 0,
-    }),
+    mutationFn: async () => {
+      let imageUrl = newImageUrl;
+      if (newImageFile) {
+        imageUrl = await uploadMutation.mutateAsync(newImageFile);
+      }
+      return createTournament({
+        title: newTitle,
+        description: newDescription || undefined,
+        image_url: imageUrl || undefined,
+        location: newLocation || undefined,
+        game: newGame || undefined,
+        starts_at: newStartsAt || undefined,
+        ends_at: newEndsAt || undefined,
+        max_participants: typeof newMaxParticipants === "number" ? newMaxParticipants : undefined,
+        price_cents: typeof newPriceCents === "number" ? newPriceCents : 0,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-tournaments"] });
       setNewTitle("");
       setNewDescription("");
       setNewImageUrl("");
+      setNewImageFile(null);
       setNewLocation("");
       setNewGame("");
       setNewStartsAt("");
@@ -120,12 +145,16 @@ export default function AdminTournamentsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!editingId) return Promise.resolve(null);
+      let imageUrl = editImageUrl;
+      if (editImageFile) {
+        imageUrl = await uploadMutation.mutateAsync(editImageFile);
+      }
       return updateTournament(editingId, {
         title: editTitle,
         description: editDescription || undefined,
-        image_url: editImageUrl || undefined,
+        image_url: imageUrl || undefined,
         location: editLocation || undefined,
         game: editGame || undefined,
         starts_at: editStartsAt || undefined,
@@ -137,6 +166,7 @@ export default function AdminTournamentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-tournaments"] });
       setEditingId(null);
+      setEditImageFile(null);
     },
   });
 
@@ -189,7 +219,7 @@ export default function AdminTournamentsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           <Input placeholder="Judul" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
           <Input placeholder="Deskripsi" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
-          <Input placeholder="URL Gambar" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} />
+          <Input type="file" onChange={(e) => setNewImageFile(e.target.files ? e.target.files[0] : null)} />
           <Input placeholder="Lokasi" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} />
           <Input placeholder="Game" value={newGame} onChange={(e) => setNewGame(e.target.value)} />
           <input
@@ -238,9 +268,12 @@ export default function AdminTournamentsPage() {
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="py-2">Judul</th>
                 <th className="py-2">Game</th>
+                <th className="py-2">Gambar</th>
                 <th className="py-2">Lokasi</th>
                 <th className="py-2">Mulai</th>
                 <th className="py-2">Selesai</th>
+                <th className="py-2">Max Peserta</th>
+                <th className="py-2">Harga</th>
                 <th className="py-2">Peserta</th>
                 <th className="py-2">Aksi</th>
               </tr>
@@ -250,95 +283,137 @@ export default function AdminTournamentsPage() {
                 const isEditing = editingId === t.id;
                 return (
                   <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-2">
-                      {isEditing ? (
-                        <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-                      ) : (
-                        t.title
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {isEditing ? (
-                        <Input value={editGame} onChange={(e) => setEditGame(e.target.value)} />
-                      ) : (
-                        t.game || "-"
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {isEditing ? (
-                        <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
-                      ) : (
-                        t.location || "-"
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {isEditing ? (
-                        <input
-                          type="datetime-local"
-                          value={editStartsAt}
-                          onChange={(e) => setEditStartsAt(e.target.value)}
-                          className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
-                        />
-                      ) : (
-                        t.starts_at ? new Date(t.starts_at).toLocaleString() : "-"
-                      )}
-                    </td>
-                    <td className="py-2">
-                      {isEditing ? (
-                        <input
-                          type="datetime-local"
-                          value={editEndsAt}
-                          onChange={(e) => setEditEndsAt(e.target.value)}
-                          className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
-                        />
-                      ) : (
-                        t.ends_at ? new Date(t.ends_at).toLocaleString() : "-"
-                      )}
-                    </td>
-                    <td className="py-2">{t.event_stats?.participants ?? 0}</td>
-                    <td className="py-2 flex gap-2">
-                      {!isEditing ? (
-                        <Button
-                          onClick={() => {
-                            setEditingId(t.id);
-                            setEditTitle(t.title || "");
-                            setEditDescription(t.description || "");
-                            setEditImageUrl(t.image_url || "");
-                            setEditLocation(t.location || "");
-                            setEditGame((t as any)?.game || "");
-                            setEditStartsAt(t.starts_at ? t.starts_at.slice(0, 16) : "");
-                            setEditEndsAt(t.ends_at ? t.ends_at.slice(0, 16) : "");
-                            setEditMaxParticipants(typeof t.max_participants === "number" ? t.max_participants : "");
-                            setEditPriceCents(typeof t.price_cents === "number" ? t.price_cents : "");
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      ) : (
-                        <>
-                          <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-                            {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setEditingId(null)}
-                          >
-                            Batal
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="destructive"
-                        onClick={() => deleteMutation.mutate(t.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        Hapus
-                      </Button>
-                      <Link href={`/tournaments/${t.id}`}>
-                        <Button variant="secondary">Lihat</Button>
-                      </Link>
-                    </td>
-                  </tr>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                       ) : (
+                         t.title
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <Input value={editGame} onChange={(e) => setEditGame(e.target.value)} />
+                       ) : (
+                         t.game || "-"
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <div>
+                           <Input
+                             type="file"
+                             onChange={(e) => setEditImageFile(e.target.files ? e.target.files[0] : null)}
+                           />
+                           {editImageUrl && !editImageFile && (
+                             <img src={editImageUrl} alt="Preview" className="w-20 h-20 mt-2" />
+                           )}
+                         </div>
+                       ) : (
+                         t.image_url ? <img src={t.image_url} alt={t.title} className="w-20 h-20" /> : '-'
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
+                       ) : (
+                         t.location || "-"
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <input
+                           type="datetime-local"
+                           value={editStartsAt}
+                           onChange={(e) => setEditStartsAt(e.target.value)}
+                           className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                         />
+                       ) : (
+                         t.starts_at ? new Date(t.starts_at).toLocaleString() : "-"
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <input
+                           type="datetime-local"
+                           value={editEndsAt}
+                           onChange={(e) => setEditEndsAt(e.target.value)}
+                           className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                         />
+                       ) : (
+                         t.ends_at ? new Date(t.ends_at).toLocaleString() : "-"
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <Input
+                           value={editMaxParticipants}
+                           onChange={(e) => setEditMaxParticipants(e.target.value ? Number(e.target.value) : "")}
+                           type="number"
+                           placeholder="Maks Peserta"
+                         />
+                       ) : (
+                         t.max_participants || "-"
+                       )}
+                     </td>
+                     <td className="py-2">
+                       {isEditing ? (
+                         <Input
+                           value={editPriceCents === "" ? "" : String(Number(editPriceCents) / 100)}
+                           onChange={(e) => {
+                             const v = e.target.value ? Number(e.target.value) : 0;
+                             setEditPriceCents(v ? v * 100 : "");
+                           }}
+                           type="number"
+                           placeholder="Harga (Rp)"
+                         />
+                       ) : (
+                         t.price_cents ? `Rp ${(t.price_cents / 100).toLocaleString()}` : "-"
+                       )}
+                     </td>
+                     <td className="py-2">{t.event_stats?.participants ?? 0}</td>
+                     <td className="py-2 flex gap-2">
+                       {!isEditing ? (
+                         <Button
+                           onClick={() => {
+                             setEditingId(t.id);
+                             setEditTitle(t.title || "");
+                             setEditDescription(t.description || "");
+                             setEditImageUrl(t.image_url || "");
+                             setEditLocation(t.location || "");
+                             setEditGame((t as any)?.game || "");
+                             setEditStartsAt(t.starts_at ? t.starts_at.slice(0, 16) : "");
+                             setEditEndsAt(t.ends_at ? t.ends_at.slice(0, 16) : "");
+                             setEditMaxParticipants(typeof t.max_participants === "number" ? t.max_participants : "");
+                             setEditPriceCents(typeof t.price_cents === "number" ? t.price_cents : "");
+                           }}
+                         >
+                           Edit
+                         </Button>
+                       ) : (
+                         <>
+                           <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+                             {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
+                           </Button>
+                           <Button
+                             variant="outline"
+                             onClick={() => setEditingId(null)}
+                           >
+                             Batal
+                           </Button>
+                         </>
+                       )}
+                       <Button
+                         variant="destructive"
+                         onClick={() => deleteMutation.mutate(t.id)}
+                         disabled={deleteMutation.isPending}
+                       >
+                         Hapus
+                       </Button>
+                       <Link href={`/tournaments/${t.id}`}>
+                         <Button variant="secondary">Lihat</Button>
+                       </Link>
+                     </td>
+                   </tr>
                 );
               })}
             </tbody>
