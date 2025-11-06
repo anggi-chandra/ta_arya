@@ -4,7 +4,8 @@ import { withModeratorAuth } from '@/lib/auth'
 
 // GET /api/admin/events/[id] - Get specific event with registrations
 export const GET = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const supabase = getSupabaseClient()
+  const authHeader = req.headers.get('authorization')
+  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
   const eventId = params.id
 
   try {
@@ -67,7 +68,8 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // PUT /api/admin/events/[id] - Update event
 export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const supabase = getSupabaseClient()
+  const authHeader = req.headers.get('authorization')
+  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
   const eventId = params.id
 
   try {
@@ -80,7 +82,8 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       starts_at,
       ends_at,
       max_participants,
-      price_cents
+      price_cents,
+      live_url
     } = body
 
     // Validate dates if provided
@@ -105,6 +108,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     if (ends_at !== undefined) updateData.ends_at = ends_at
     if (max_participants !== undefined) updateData.max_participants = max_participants
     if (price_cents !== undefined) updateData.price_cents = price_cents
+    if (live_url !== undefined) updateData.live_url = live_url
 
     const { data, error } = await supabase
       .from('events')
@@ -135,7 +139,8 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // DELETE /api/admin/events/[id] - Delete event
 export const DELETE = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const supabase = getSupabaseClient()
+  const authHeader = req.headers.get('authorization')
+  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
   const eventId = params.id
 
   try {

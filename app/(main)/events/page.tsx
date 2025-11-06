@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Trophy, Video, Filter } from "lucide-react";
+import { Calendar, MapPin, Trophy, Video, Filter, Edit, Users, GitBranch } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 type EventType = "turnamen" | "kompetisi" | "workshop";
 type EventStatus = "upcoming" | "ongoing" | "completed";
@@ -25,6 +26,27 @@ interface EventItem {
   maxParticipants?: number;
   liveUrl?: string;
   winners?: { team: string; prize?: string }[];
+  bracket?: any[];
+  prize_pool?: number;
+  max_participants?: number;
+  starts_at?: string;
+  ends_at?: string;
+  image_url?: string;
+  event_stats?: { participants?: number } | null;
+}
+
+// Fetch events from API
+async function fetchEvents() {
+  const res = await fetch('/api/events', { credentials: 'include' });
+  if (!res.ok) throw new Error('Gagal memuat events');
+  return res.json();
+}
+
+// Fetch tournaments from API  
+async function fetchTournaments() {
+  const res = await fetch('/api/tournaments', { credentials: 'include' });
+  if (!res.ok) throw new Error('Gagal memuat tournaments');
+  return res.json();
 }
 
 const eventsData: EventItem[] = [
@@ -114,6 +136,63 @@ export default function EventsPage() {
   const [filterGame, setFilterGame] = useState<string>("Semua");
   const [filterLocation, setFilterLocation] = useState<string>("Semua");
   const [filterType, setFilterType] = useState<string>("Semua");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Fetch events and tournaments data
+  const { data: eventsData = [], isLoading, error } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const [eventsRes, tournamentsRes] = await Promise.all([
+        fetch('/api/events', { credentials: 'include' }).then(res => res.json()),
+        fetch('/api/tournaments', { credentials: 'include' }).then(res => res.json())
+      ]);
+      
+      const events = eventsRes.events || eventsRes || [];
+      const tournaments = tournamentsRes.tournaments || tournamentsRes || [];
+      
+      // Combine and normalize data
+      const combinedEvents = [
+        ...events.map((e: any) => ({
+          ...e,
+          type: 'event',
+          status: e.status || 'upcoming',
+          game: e.game || 'General',
+          date: e.starts_at ? new Date(e.starts_at).toISOString().split('T')[0] : '',
+          time: e.starts_at ? new Date(e.starts_at).toTimeString().slice(0, 5) : '',
+          prizePool: e.prize_pool ? `Rp ${e.prize_pool.toLocaleString()}` : undefined,
+          maxParticipants: e.max_participants,
+          participants: e.event_stats?.participants || 0,
+          image: e.image_url || '/images/hero-esports.svg'
+        })),
+        ...tournaments.map((t: any) => ({
+          ...t,
+          type: 'turnamen',
+          status: t.status || 'upcoming',
+          game: t.game || 'General',
+          date: t.starts_at ? new Date(t.starts_at).toISOString().split('T')[0] : '',
+          time: t.starts_at ? new Date(t.starts_at).toTimeString().slice(0, 5) : '',
+          prizePool: t.prize_pool ? `Rp ${t.prize_pool.toLocaleString()}` : undefined,
+          maxParticipants: t.max_participants,
+          participants: t.event_stats?.participants || 0,
+          image: t.image_url || '/images/hero-esports.svg'
+        }))
+      ];
+      
+      return combinedEvents;
+    }
+  });
+
+  // Check if user is admin
+  useQuery({
+    queryKey: ['user-role'],
+    queryFn: async () => {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const user = await res.json();
+        setIsAdmin(user.role === 'admin');
+      }
+    }
+  });
 
   const resetFilters = () => {
     setFilterGame("Semua");
@@ -149,9 +228,19 @@ export default function EventsPage() {
     <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Event Esports</h1>
-        <Link href="/dashboard/events">
-          <Button variant="outline">Kelola Event</Button>
-        </Link>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Link href="/admin/events">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Edit Event
+              </Button>
+            </Link>
+          )}
+          <Link href="/dashboard/events">
+            <Button variant="outline">Kelola Event</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter Event */}
@@ -210,6 +299,20 @@ export default function EventsPage() {
           </div>
         </div>
       </Card>
+
+      {/* Loading State */}
+      {isLoading && (
+        <Card className="p-6 mb-8">
+          <p className="text-gray-600 dark:text-gray-400">Memuat data event...</p>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="p-6 mb-8">
+          <p className="text-red-500">Gagal memuat data event. Silakan coba lagi.</p>
+        </Card>
+      )}
 
       {/* Event yang Sedang Berlangsung */}
       <section className="mb-12">
@@ -379,37 +482,81 @@ export default function EventsPage() {
             <p className="text-gray-600 dark:text-gray-400">Belum ada hasil event.</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {completedEvents.map((e) => (
               <Card key={e.id} className="p-6">
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{e.game} • {e.type.toUpperCase()}</div>
-                    <h3 className="text-lg font-bold">{e.title}</h3>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{e.game} • {e.type.toUpperCase()}</div>
+                    <h3 className="text-xl font-bold mb-2">{e.title}</h3>
                   </div>
                   {e.prizePool && (
-                    <div className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-xs">
+                    <div className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-sm font-semibold">
                       Prize Pool {e.prizePool}
                     </div>
                   )}
                 </div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                  <div className="flex items-center"><Calendar className="h-4 w-4 mr-2" />{e.date}</div>
-                  <div className="flex items-center"><MapPin className="h-4 w-4 mr-2" />{e.location}</div>
+                
+                {/* Detail Event */}
+                <div className="space-y-3 mb-6 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-3 text-blue-500" />
+                    <span>{e.date} • {e.time} WIB</span>
+                  </div>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-3 text-green-500" />
+                    <span>{e.location}</span>
+                  </div>
+                  {e.maxParticipants && (
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-3 text-purple-500" />
+                      <span>Max {e.maxParticipants} peserta</span>
+                    </div>
+                  )}
+                  {e.bracket && (
+                    <div className="flex items-center">
+                      <GitBranch className="h-4 w-4 mr-3 text-orange-500" />
+                      <span>Format: {e.bracket}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Pemenang */}
                 {e.winners && e.winners.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Pemenang</h4>
-                    <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                      {e.winners.map((w, i) => (
-                        <li key={`${e.id}-winner-${i}`} className="flex items-center">
-                          <Trophy className="h-4 w-4 mr-2 text-yellow-600" />
-                          <span>{w.team}{w.prize ? ` • ${w.prize}` : ""}</span>
-                        </li>
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-3 flex items-center">
+                      <Trophy className="h-5 w-5 mr-2 text-yellow-500" />
+                      Pemenang
+                    </h4>
+                    <div className="space-y-2">
+                      {e.winners.map((w: { team: string; prize?: string }, i: number) => (
+                        <div key={`${e.id}-winner-${i}`} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                          <div className="flex items-center">
+                            <span className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-xs font-bold text-yellow-700 dark:text-yellow-300 mr-3">
+                              {i + 1}
+                            </span>
+                            <span className="font-medium">{w.team}</span>
+                          </div>
+                          {w.prize && (
+                            <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+                              {w.prize}
+                            </span>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
+
+                {/* Tombol Aksi */}
+                <div className="flex gap-3 mt-4">
+                  <Link href={`/events/${e.id}`}>
+                    <Button size="sm" variant="outline">Lihat Detail</Button>
+                  </Link>
+                  <Link href={`/events/${e.id}/bracket`}>
+                    <Button size="sm" variant="ghost">Lihat Bracket</Button>
+                  </Link>
+                </div>
               </Card>
             ))}
           </div>

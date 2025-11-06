@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token?.sub) {
+    // Ensure we have a valid user id and a string access token
+    const hasUserId = !!token?.sub;
+    const supabaseToken = typeof token?.supabaseAccessToken === "string" ? token!.supabaseAccessToken : "";
+    if (!hasUserId || !supabaseToken) {
       return NextResponse.json({ roles: [] }, { status: 200 });
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !serviceKey) {
-      return NextResponse.json(
-        { error: "SUPABASE env tidak lengkap", roles: [] },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(url, serviceKey);
+    const supabase = getSupabaseClient(supabaseToken);
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", token.sub);
+      .eq("user_id", token!.sub);
 
     if (error) {
       return NextResponse.json({ error: error.message, roles: [] }, { status: 500 });

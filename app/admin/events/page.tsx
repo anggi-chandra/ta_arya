@@ -17,6 +17,7 @@ type EventItem = {
   max_participants?: number;
   price_cents?: number;
   event_stats?: { participants?: number } | null;
+  live_url?: string;
 };
 
 async function fetchAdminEvents(page: number, limit: number, search: string, status: string) {
@@ -25,7 +26,9 @@ async function fetchAdminEvents(page: number, limit: number, search: string, sta
   params.set("limit", String(limit));
   if (search) params.set("search", search);
   if (status) params.set("status", status);
-  const res = await fetch(`/api/admin/events?${params.toString()}`);
+  const res = await fetch(`/api/admin/events?${params.toString()}`, {
+    credentials: 'include'
+  });
   if (!res.ok) throw new Error("Gagal memuat data event");
   return res.json() as Promise<{ events: EventItem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>;
 }
@@ -35,6 +38,7 @@ async function createEvent(payload: Partial<EventItem>) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    credentials: 'include'
   });
   if (!res.ok) throw new Error("Gagal membuat event");
   return res.json();
@@ -45,13 +49,17 @@ async function updateEvent(id: string, payload: Partial<EventItem>) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    credentials: 'include'
   });
   if (!res.ok) throw new Error("Gagal memperbarui event");
   return res.json();
 }
 
 async function deleteEvent(id: string) {
-  const res = await fetch(`/api/admin/events/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/admin/events/${id}`, { 
+    method: "DELETE",
+    credentials: 'include'
+  });
   if (!res.ok) throw new Error("Gagal menghapus event");
   return res.json();
 }
@@ -66,12 +74,14 @@ export default function AdminEventsPage() {
   const [newLocation, setNewLocation] = useState("");
   const [newStartsAt, setNewStartsAt] = useState("");
   const [newEndsAt, setNewEndsAt] = useState("");
+  const [newLiveUrl, setNewLiveUrl] = useState("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editStartsAt, setEditStartsAt] = useState("");
   const [editEndsAt, setEditEndsAt] = useState("");
+  const [editLiveUrl, setEditLiveUrl] = useState("");
 
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
@@ -85,6 +95,7 @@ export default function AdminEventsPage() {
       location: newLocation || undefined,
       starts_at: newStartsAt || undefined,
       ends_at: newEndsAt || undefined,
+      live_url: newLiveUrl || undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-events"] });
@@ -92,6 +103,7 @@ export default function AdminEventsPage() {
       setNewLocation("");
       setNewStartsAt("");
       setNewEndsAt("");
+      setNewLiveUrl("");
     },
   });
 
@@ -103,6 +115,7 @@ export default function AdminEventsPage() {
         location: editLocation || undefined,
         starts_at: editStartsAt || undefined,
         ends_at: editEndsAt || undefined,
+        live_url: editLiveUrl || undefined,
       });
     },
     onSuccess: () => {
@@ -153,23 +166,28 @@ export default function AdminEventsPage() {
             <option value="ongoing">Berlangsung</option>
             <option value="completed">Selesai</option>
           </select>
-          <Button onClick={() => { setPage(1); refetch(); }}>Cari</Button>
+          <Button onClick={() => setPage(1)}>Cari</Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
           <Input placeholder="Judul baru" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
           <Input placeholder="Lokasi" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} />
-          <input
+          <Input
             type="datetime-local"
             value={newStartsAt}
             onChange={(e) => setNewStartsAt(e.target.value)}
             className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
           />
-          <input
+          <Input
             type="datetime-local"
             value={newEndsAt}
             onChange={(e) => setNewEndsAt(e.target.value)}
             className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+          />
+          <Input 
+            placeholder="Link Live Stream (opsional)" 
+            value={newLiveUrl} 
+            onChange={(e) => setNewLiveUrl(e.target.value)}
           />
         </div>
         <div className="mt-3">
@@ -192,6 +210,7 @@ export default function AdminEventsPage() {
                 <th className="py-2">Lokasi</th>
                 <th className="py-2">Mulai</th>
                 <th className="py-2">Selesai</th>
+                <th className="py-2">Live URL</th>
                 <th className="py-2">Peserta</th>
                 <th className="py-2">Aksi</th>
               </tr>
@@ -217,7 +236,7 @@ export default function AdminEventsPage() {
                     </td>
                     <td className="py-2">
                       {isEditing ? (
-                        <input
+                        <Input
                           type="datetime-local"
                           value={editStartsAt}
                           onChange={(e) => setEditStartsAt(e.target.value)}
@@ -229,7 +248,7 @@ export default function AdminEventsPage() {
                     </td>
                     <td className="py-2">
                       {isEditing ? (
-                        <input
+                        <Input
                           type="datetime-local"
                           value={editEndsAt}
                           onChange={(e) => setEditEndsAt(e.target.value)}
@@ -237,6 +256,21 @@ export default function AdminEventsPage() {
                         />
                       ) : (
                         ev.ends_at ? new Date(ev.ends_at).toLocaleString() : "-"
+                      )}
+                    </td>
+                    <td className="py-2">
+                      {isEditing ? (
+                        <Input 
+                          placeholder="Link Live Stream" 
+                          value={editLiveUrl} 
+                          onChange={(e) => setEditLiveUrl(e.target.value)}
+                        />
+                      ) : (
+                        ev.live_url ? (
+                          <a href={ev.live_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                            Tonton Live
+                          </a>
+                        ) : "-"
                       )}
                     </td>
                     <td className="py-2">{ev.event_stats?.participants ?? 0}</td>
@@ -249,6 +283,7 @@ export default function AdminEventsPage() {
                             setEditLocation(ev.location || "");
                             setEditStartsAt(ev.starts_at ? ev.starts_at.slice(0, 16) : "");
                             setEditEndsAt(ev.ends_at ? ev.ends_at.slice(0, 16) : "");
+                            setEditLiveUrl(ev.live_url || "");
                           }}
                         >
                           Edit

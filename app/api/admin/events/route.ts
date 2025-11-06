@@ -3,8 +3,7 @@ import { getSupabaseClient } from '@/lib/auth'
 import { withModeratorAuth } from '@/lib/auth'
 
 // GET /api/admin/events - Get all events with pagination and filters
-export const GET = withModeratorAuth(async (req: NextRequest) => {
-  const supabase = getSupabaseClient()
+export const GET = withModeratorAuth(async (req: NextRequest, user: any) => {
   const { searchParams } = new URL(req.url)
   
   const page = parseInt(searchParams.get('page') || '1')
@@ -15,7 +14,9 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
   const offset = (page - 1) * limit
 
   try {
-    // Build query for events with creator info and stats
+    // Get token from request for Supabase client
+    const authHeader = req.headers.get('authorization')
+    const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
     let query = supabase
       .from('events')
       .select(`
@@ -99,10 +100,12 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
 
 // POST /api/admin/events - Create new event
 export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
-  const supabase = getSupabaseClient()
-  
   try {
     const body = await req.json()
+    
+    // Get token from request for Supabase client
+    const authHeader = req.headers.get('authorization')
+    const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
     const {
       title,
       description,
@@ -111,7 +114,8 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       starts_at,
       ends_at,
       max_participants,
-      price_cents = 0
+      price_cents = 0,
+      live_url
     } = body
 
     if (!title || !starts_at) {
@@ -143,6 +147,7 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
         ends_at,
         max_participants,
         price_cents,
+        live_url,
         created_by: user.id
       })
       .select()

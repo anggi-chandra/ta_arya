@@ -60,7 +60,7 @@ export const authOptions = {
   events: {
     async signIn({ user }: { user?: any }) {
       try {
-        const supa = getSupabaseClient();
+        const supa = getSupabaseClient((user as any)?.supabaseAccessToken);
         const userId = (user as any)?.id;
         const userEmail = (user as any)?.email as string | undefined;
         const fullName = (user as any)?.name as string | undefined;

@@ -17,11 +17,20 @@ export interface AuthUser {
 }
 
 // Create Supabase client for server-side operations
-function createSupabaseClient() {
+function createSupabaseClient(jwt?: string) {
+  const options = jwt ? {
+    global: {
+      headers: {
+        Authorization: `Bearer ${jwt}`
+      }
+    }
+  } : {};
+  
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    options
+  );
 }
 
 // Get current user with roles (simplified for testing)
@@ -220,6 +229,6 @@ export async function createAdminUser(userId: string, grantedBy?: string) {
 }
 
 // Get Supabase client for use in API routes
-export function getSupabaseClient() {
-  return createSupabaseClient()
+export function getSupabaseClient(jwt?: string) {
+  return createSupabaseClient(jwt)
 }
