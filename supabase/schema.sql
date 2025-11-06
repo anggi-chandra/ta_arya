@@ -445,7 +445,100 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
-drop trigger if exists trg_notify_forum_reply on public.forum_replies;
+drop trigger if not exists trg_notify_forum_reply on public.forum_replies;
 create trigger trg_notify_forum_reply
 after insert on public.forum_replies
 for each row execute procedure public.notify_forum_reply();
+
+-- Tournaments table (dedicated tournament management)
+create table if not exists public.tournaments (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  game text not null,
+  tournament_type text not null check (tournament_type in ('single_elimination', 'double_elimination', 'round_robin', 'swiss')),
+  format text not null check (format in ('1v1', '2v2', '3v3', '4v4', '5v5', 'custom')),
+  max_participants int not null,
+  prize_pool int default 0,
+  currency text default 'IDR',
+  entry_fee int default 0,
+  location text,
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  registration_deadline timestamptz not null,
+  status text default 'upcoming' check (status in ('upcoming', 'ongoing', 'completed', 'cancelled')),
+  rules text,
+  banner_url text,
+  organizer_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.tournaments enable row level security;
+create policy "tournaments readable" on public.tournaments for select using (true);
+create policy "authenticated can create tournaments" on public.tournaments for insert with check (auth.role() = 'authenticated');
+create policy "organizers can update own tournaments" on public.tournaments for update using (auth.uid() = organizer_id);
+create policy "organizers can delete own tournaments" on public.tournaments for delete using (auth.uid() = organizer_id);
+create policy "admins can manage all tournaments" on public.tournaments for all using (
+  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+);
+
+-- Tournament participants
+create table if not exists public.tournament_participants (
+  tournament_id uuid references public.tournaments(id) on delete cascade,
+  team_id uuid references public.teams(id) on delete cascade,
+  status text default 'registered' check (status in ('registered', 'checked_in', 'eliminated', 'withdrawn')),
+  seed int,
+  checked_in_at timestamptz,
+  registered_at timestamptz default now(),
+  primary key (tournament_id, team_id)
+);
+
+alter table public.tournament_participants enable row level security;
+create policy "participants readable" on public.tournament_participants for select using (true);
+create policy "team owners can register team" on public.tournament_participants for insert with check (
+  exists (select 1 from public.teams t where t.id = team_id and t.owner_id = auth.uid())
+);
+create policy "organizers can manage participants" on public.tournament_participants for all using (
+  exists (select 1 from public.tournaments t where t.id = tournament_id and t.organizer_id = auth.uid())
+);
+
+-- Tournament matches
+create table if not exists public.tournament_matches (
+  id uuid primary key default gen_random_uuid(),
+  tournament_id uuid references public.tournaments(id) on delete cascade,
+  round int not null,
+  match_number int not null,
+  team1_id uuid references public.teams(id) on delete set null,
+  team2_id uuid references public.teams(id) on delete set null,
+  winner_id uuid references public.teams(id) on delete set null,
+  score_team1 int default 0,
+  score_team2 int default 0,
+  status text default 'pending' check (status in ('pending', 'ongoing', 'completed', 'cancelled')),
+  scheduled_at timestamptz,
+  started_at timestamptz,
+  ended_at timestamptz,
+  created_at timestamptz default now(),
+  unique(tournament_id, round, match_number)
+);
+
+alter table public.tournament_matches enable row level security;
+create policy "matches readable" on public.tournament_matches for select using (true);
+create policy "organizers can manage matches" on public.tournament_matches for all using (
+  exists (select 1 from public.tournaments t where t.id = tournament_id and t.organizer_id = auth.uid())
+);
+
+-- Tournament stats view
+create or replace view public.tournament_stats as
+select t.id as tournament_id,
+       t.title as tournament_title,
+       count(p.team_id) as total_participants,
+       count(case when p.status = 'registered' then 1 end) as registered_teams,
+       count(case when p.status = 'checked_in' then 1 end) as checked_in_teams,
+       count(case when p.status = 'eliminated' then 1 end) as eliminated_teams,
+       count(m.id) as total_matches,
+       count(case when m.status = 'completed' then 1 end) as completed_matches
+from public.tournaments t
+left join public.tournament_participants p on p.tournament_id = t.id
+left join public.tournament_matches m on m.tournament_id = t.id
+group by t.id, t.title;
