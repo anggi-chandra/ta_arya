@@ -6,15 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
 
 export default function AdminSettingsPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Pengaturan Admin</h1>
-        <p className="text-muted-foreground">
-          Kelola pengaturan untuk panel admin dan situs web.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Pengaturan Admin</h1>
+          <p className="text-muted-foreground">
+            Kelola pengaturan untuk panel admin dan situs web.
+          </p>
+        </div>
+        <Link href="/admin">
+          <Button variant="outline">Kembali</Button>
+        </Link>
       </div>
 
       {/* Admin Profile Settings */}

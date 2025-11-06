@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 type UserRole = { id: string; role: string };
 type Profile = { id: string; full_name?: string; username?: string; user_roles?: UserRole[] };
@@ -43,7 +44,12 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Kelola Pengguna</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Kelola Pengguna</h1>
+        <Link href="/admin">
+          <Button variant="outline">Kembali</Button>
+        </Link>
+      </div>
 
       <div className="mb-4 flex gap-2">
         <input

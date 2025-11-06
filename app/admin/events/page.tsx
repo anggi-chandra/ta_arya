@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
 type EventItem = {
   id: string;
@@ -122,7 +123,12 @@ export default function AdminEventsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Event</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Event</h1>
+        <Link href="/admin">
+          <Button variant="outline">Kembali</Button>
+        </Link>
+      </div>
 
       <Card className="p-6 mb-6">
         <p className="text-gray-600 dark:text-gray-400 mb-4">

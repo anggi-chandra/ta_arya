@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -139,7 +140,12 @@ export default function AdminContentPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Konten</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Konten</h1>
+        <Link href="/admin">
+          <Button variant="outline">Kembali</Button>
+        </Link>
+      </div>
 
       {/* Filter & search */}
       <Card className="p-6 mb-6">
