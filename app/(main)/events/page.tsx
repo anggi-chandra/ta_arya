@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Trophy, Video, Filter, Edit, Users, GitBranch } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type EventType = "turnamen" | "kompetisi" | "workshop";
+type EventType = "turnamen" | "kompetisi" | "workshop" | "event";
 type EventStatus = "upcoming" | "ongoing" | "completed";
 
 interface EventItem {
@@ -33,104 +33,8 @@ interface EventItem {
   ends_at?: string;
   image_url?: string;
   event_stats?: { participants?: number } | null;
+  price_cents?: number;
 }
-
-// Fetch events from API
-async function fetchEvents() {
-  const res = await fetch('/api/events', { credentials: 'include' });
-  if (!res.ok) throw new Error('Gagal memuat events');
-  return res.json();
-}
-
-// Fetch tournaments from API  
-async function fetchTournaments() {
-  const res = await fetch('/api/tournaments', { credentials: 'include' });
-  if (!res.ok) throw new Error('Gagal memuat tournaments');
-  return res.json();
-}
-
-const eventsData: EventItem[] = [
-  {
-    id: "mlbb-champ-2025",
-    title: "MLBB National Championship 2025",
-    game: "Mobile Legends",
-    description: "Turnamen nasional resmi MLBB untuk mencari juara Indonesia.",
-    date: "2025-12-05",
-    time: "13:00",
-    location: "Jakarta",
-    type: "turnamen",
-    status: "upcoming",
-    prizePool: "Rp 300.000.000",
-    image: "/images/hero-esports.svg",
-    participants: 64,
-    maxParticipants: 128,
-  },
-  {
-    id: "valo-indo-open",
-    title: "Valorant Indonesia Open",
-    game: "Valorant",
-    description: "Open qualifier untuk tim Valorant seluruh Indonesia.",
-    date: "2025-11-20",
-    time: "19:00",
-    location: "Bandung",
-    type: "kompetisi",
-    status: "ongoing",
-    prizePool: "Rp 150.000.000",
-    liveUrl: "https://twitch.tv/esportsindo",
-    image: "/images/hero-esports.svg",
-    participants: 32,
-    maxParticipants: 32,
-  },
-  {
-    id: "pubgm-pro-league-s6",
-    title: "PUBGM Pro League S6",
-    game: "PUBG Mobile",
-    description: "Liga profesional PUBG Mobile Indonesia Season 6.",
-    date: "2025-11-28",
-    time: "18:00",
-    location: "Surabaya",
-    type: "turnamen",
-    status: "upcoming",
-    prizePool: "Rp 500.000.000",
-    image: "/images/hero-esports.svg",
-    participants: 20,
-    maxParticipants: 20,
-  },
-  {
-    id: "creator-workshop-ff",
-    title: "Free Fire Creator Workshop",
-    game: "Free Fire",
-    description: "Workshop konten kreator dan strategi kompetitif Free Fire.",
-    date: "2025-10-10",
-    time: "10:00",
-    location: "Online",
-    type: "workshop",
-    status: "completed",
-    image: "/images/hero-esports.svg",
-    winners: [
-      { team: "Top Content Award - @NandoFF" },
-      { team: "Strategy MVP - Team Phoenix" },
-    ],
-  },
-  {
-    id: "dota2-kompetitif-series",
-    title: "DOTA 2 Kompetitif Series",
-    game: "DOTA 2",
-    description: "Kompetisi komunitas DOTA 2 untuk tim semi-pro.",
-    date: "2025-09-20",
-    time: "17:00",
-    location: "Yogyakarta",
-    type: "kompetisi",
-    status: "completed",
-    prizePool: "Rp 50.000.000",
-    image: "/images/hero-esports.svg",
-    winners: [
-      { team: "Juara 1 - ONIC Beta", prize: "Rp 25.000.000" },
-      { team: "Juara 2 - RRQ Academy", prize: "Rp 15.000.000" },
-      { team: "Juara 3 - EVOS Young", prize: "Rp 10.000.000" },
-    ],
-  },
-];
 
 export default function EventsPage() {
   const [filterGame, setFilterGame] = useState<string>("Semua");
@@ -139,57 +43,141 @@ export default function EventsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Fetch events and tournaments data
-  const { data: eventsData = [], isLoading, error } = useQuery({
+  const { data: eventsData = [], isLoading, error, refetch } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
-      const [eventsRes, tournamentsRes] = await Promise.all([
-        fetch('/api/events', { credentials: 'include' }).then(res => res.json()),
-        fetch('/api/tournaments', { credentials: 'include' }).then(res => res.json())
-      ]);
-      
-      const events = eventsRes.events || eventsRes || [];
-      const tournaments = tournamentsRes.tournaments || tournamentsRes || [];
-      
-      // Combine and normalize data
-      const combinedEvents = [
-        ...events.map((e: any) => ({
-          ...e,
-          type: 'event',
-          status: e.status || 'upcoming',
-          game: e.game || 'General',
-          date: e.starts_at ? new Date(e.starts_at).toISOString().split('T')[0] : '',
-          time: e.starts_at ? new Date(e.starts_at).toTimeString().slice(0, 5) : '',
-          prizePool: e.prize_pool ? `Rp ${e.prize_pool.toLocaleString()}` : undefined,
-          maxParticipants: e.max_participants,
-          participants: e.event_stats?.participants || 0,
-          image: e.image_url || '/images/hero-esports.svg'
-        })),
-        ...tournaments.map((t: any) => ({
-          ...t,
-          type: 'turnamen',
-          status: t.status || 'upcoming',
-          game: t.game || 'General',
-          date: t.starts_at ? new Date(t.starts_at).toISOString().split('T')[0] : '',
-          time: t.starts_at ? new Date(t.starts_at).toTimeString().slice(0, 5) : '',
-          prizePool: t.prize_pool ? `Rp ${t.prize_pool.toLocaleString()}` : undefined,
-          maxParticipants: t.max_participants,
-          participants: t.event_stats?.participants || 0,
-          image: t.image_url || '/images/hero-esports.svg'
-        }))
-      ];
-      
-      return combinedEvents;
-    }
+      try {
+        // Fetch events (without status filter to get all events)
+        const eventsResponse = await fetch('/api/events', { 
+          credentials: 'include' 
+        });
+        
+        if (!eventsResponse.ok) {
+          const errorData = await eventsResponse.json().catch(() => ({}));
+          console.error('Error fetching events:', eventsResponse.status, errorData);
+          throw new Error(errorData.error || `Failed to fetch events: ${eventsResponse.statusText}`);
+        }
+        
+        const eventsData = await eventsResponse.json();
+        const events = eventsData.events || eventsData || [];
+        
+        // Try to fetch tournaments (optional, don't fail if error)
+        let tournaments: any[] = [];
+        try {
+          const tournamentsResponse = await fetch('/api/tournaments', { 
+            credentials: 'include' 
+          });
+          if (tournamentsResponse.ok) {
+            const tournamentsData = await tournamentsResponse.json();
+            tournaments = tournamentsData.tournaments || tournamentsData || [];
+          }
+        } catch (tournamentsError) {
+          console.warn('Error fetching tournaments (non-critical):', tournamentsError);
+        }
+        
+        // Determine status based on dates
+        const now = new Date();
+        
+        // Combine and normalize data
+        const combinedEvents = [
+          ...events.map((e: any) => {
+            const startsAt = e.starts_at ? new Date(e.starts_at) : null;
+            const endsAt = e.ends_at ? new Date(e.ends_at) : null;
+            
+            // Determine status based on dates
+            let status: EventStatus = 'upcoming';
+            if (startsAt && endsAt) {
+              if (now >= startsAt && now <= endsAt) {
+                status = 'ongoing';
+              } else if (now > endsAt) {
+                status = 'completed';
+              } else {
+                status = 'upcoming';
+              }
+            } else if (startsAt) {
+              if (now >= startsAt) {
+                status = 'completed';
+              } else {
+                status = 'upcoming';
+              }
+            }
+            
+            return {
+              ...e,
+              type: 'event' as EventType,
+              status,
+              game: e.game || 'General',
+              location: e.location || 'TBA',
+              date: startsAt ? startsAt.toISOString().split('T')[0] : '',
+              time: startsAt ? startsAt.toTimeString().slice(0, 5) : '',
+              prizePool: e.price_cents ? `Rp ${(e.price_cents / 100).toLocaleString('id-ID')}` : undefined,
+              maxParticipants: e.max_participants,
+              participants: e.event_stats?.participants || 0,
+              image: e.image_url || '/images/hero-esports.svg',
+              liveUrl: e.live_url
+            };
+          }),
+          ...tournaments.map((t: any) => {
+            const startsAt = t.starts_at ? new Date(t.starts_at) : null;
+            const endsAt = t.ends_at ? new Date(t.ends_at) : null;
+            
+            // Determine status
+            let status: EventStatus = t.status || 'upcoming';
+            if (startsAt && endsAt) {
+              if (now >= startsAt && now <= endsAt) {
+                status = 'ongoing';
+              } else if (now > endsAt) {
+                status = 'completed';
+              }
+            }
+            
+            return {
+              ...t,
+              type: 'turnamen' as EventType,
+              status,
+              game: t.game || 'General',
+              location: t.location || 'TBA',
+              date: startsAt ? startsAt.toISOString().split('T')[0] : '',
+              time: startsAt ? startsAt.toTimeString().slice(0, 5) : '',
+              prizePool: t.prize_pool ? `Rp ${t.prize_pool.toLocaleString('id-ID')}` : undefined,
+              maxParticipants: t.max_participants,
+              participants: t.event_stats?.participants || 0,
+              image: t.banner_url || '/images/hero-esports.svg'
+            };
+          })
+        ];
+        
+        console.log('Fetched events:', { 
+          eventsCount: events.length, 
+          tournamentsCount: tournaments.length, 
+          total: combinedEvents.length,
+          upcoming: combinedEvents.filter(e => e.status === 'upcoming').length,
+          ongoing: combinedEvents.filter(e => e.status === 'ongoing').length,
+          completed: combinedEvents.filter(e => e.status === 'completed').length
+        });
+        
+        return combinedEvents;
+      } catch (err: any) {
+        console.error('Error in fetchEvents queryFn:', err);
+        throw err;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000
   });
 
   // Check if user is admin
   useQuery({
     queryKey: ['user-role'],
     queryFn: async () => {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
-      if (res.ok) {
-        const user = await res.json();
-        setIsAdmin(user.role === 'admin');
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const user = await res.json();
+          setIsAdmin(user.roles?.includes('admin') || user.role === 'admin');
+        }
+      } catch (error) {
+        console.warn('Error checking user role:', error);
       }
     }
   });
@@ -201,16 +189,16 @@ export default function EventsPage() {
   };
 
   const games = useMemo(
-    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.game)))],
-    []
+    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.game).filter(Boolean)))],
+    [eventsData]
   );
   const locations = useMemo(
-    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.location)))],
-    []
+    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.location).filter(Boolean)))],
+    [eventsData]
   );
   const types = useMemo(
-    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.type)))],
-    []
+    () => ["Semua", ...Array.from(new Set(eventsData.map((e) => e.type).filter(Boolean)))],
+    [eventsData]
   );
 
   const matchesFilter = (e: EventItem) => {
@@ -309,8 +297,19 @@ export default function EventsPage() {
 
       {/* Error State */}
       {error && (
-        <Card className="p-6 mb-8">
-          <p className="text-red-500">Gagal memuat data event. Silakan coba lagi.</p>
+        <Card className="p-6 mb-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <div className="flex flex-col gap-2">
+            <p className="text-red-600 dark:text-red-400 font-medium">Gagal memuat data event</p>
+            <p className="text-red-500 dark:text-red-300 text-sm">
+              {(error as Error).message || 'Terjadi kesalahan saat memuat data. Silakan coba lagi.'}
+            </p>
+            <button 
+              onClick={() => refetch()} 
+              className="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline self-start"
+            >
+              Coba lagi
+            </button>
+          </div>
         </Card>
       )}
 
@@ -324,7 +323,7 @@ export default function EventsPage() {
             </Link>
           )}
         </div>
-        {ongoingEvents.length === 0 ? (
+        {!isLoading && !error && ongoingEvents.length === 0 ? (
           <Card className="p-6">
             <p className="text-gray-600 dark:text-gray-400">
               Saat ini tidak ada event yang sedang berlangsung.
@@ -373,7 +372,7 @@ export default function EventsPage() {
                     <Link href={`/register?for=event&id=${e.id}`}>
                       <Button variant="outline">Daftar Event</Button>
                     </Link>
-                    <Link href={`/events`}>
+                    <Link href={`/events/${e.id}`}>
                       <Button variant="ghost">Lihat Detail</Button>
                     </Link>
                   </div>
@@ -394,9 +393,13 @@ export default function EventsPage() {
             </Link>
           )}
         </div>
-        {upcomingEvents.length === 0 ? (
+        {!isLoading && !error && upcomingEvents.length === 0 ? (
           <Card className="p-6">
-            <p className="text-gray-600 dark:text-gray-400">Tidak ada event yang akan datang sesuai filter.</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              {eventsData.length === 0 
+                ? 'Tidak ada event. Buat event pertama Anda melalui admin panel.'
+                : 'Tidak ada event yang akan datang sesuai filter.'}
+            </p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -414,7 +417,7 @@ export default function EventsPage() {
                     )}
                   </div>
                   <h3 className="text-lg font-bold mb-1">{e.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{e.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{e.description}</p>
                   <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300 mb-4">
                     <div className="flex items-center"><Calendar className="h-4 w-4 mr-2" />{e.date} • {e.time} WIB</div>
                     <div className="flex items-center"><MapPin className="h-4 w-4 mr-2" />{e.location}</div>
@@ -423,7 +426,7 @@ export default function EventsPage() {
                     <Link href={`/register?for=event&id=${e.id}`}>
                       <Button size="sm" className="">Daftar</Button>
                     </Link>
-                    <Link href={`/events`}>
+                    <Link href={`/events/${e.id}`}>
                       <Button size="sm" variant="outline">Detail</Button>
                     </Link>
                   </div>
@@ -477,7 +480,7 @@ export default function EventsPage() {
             </Link>
           )}
         </div>
-        {completedEvents.length === 0 ? (
+        {!isLoading && !error && completedEvents.length === 0 ? (
           <Card className="p-6">
             <p className="text-gray-600 dark:text-gray-400">Belum ada hasil event.</p>
           </Card>
@@ -521,41 +524,16 @@ export default function EventsPage() {
                   )}
                 </div>
 
-                {/* Pemenang */}
-                {e.winners && e.winners.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Trophy className="h-5 w-5 mr-2 text-yellow-500" />
-                      Pemenang
-                    </h4>
-                    <div className="space-y-2">
-                      {e.winners.map((w: { team: string; prize?: string }, i: number) => (
-                        <div key={`${e.id}-winner-${i}`} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                          <div className="flex items-center">
-                            <span className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-xs font-bold text-yellow-700 dark:text-yellow-300 mr-3">
-                              {i + 1}
-                            </span>
-                            <span className="font-medium">{w.team}</span>
-                          </div>
-                          {w.prize && (
-                            <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
-                              {w.prize}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Tombol Aksi */}
                 <div className="flex gap-3 mt-4">
                   <Link href={`/events/${e.id}`}>
                     <Button size="sm" variant="outline">Lihat Detail</Button>
                   </Link>
-                  <Link href={`/events/${e.id}/bracket`}>
-                    <Button size="sm" variant="ghost">Lihat Bracket</Button>
-                  </Link>
+                  {e.bracket && (
+                    <Link href={`/events/${e.id}/bracket`}>
+                      <Button size="sm" variant="ghost">Lihat Bracket</Button>
+                    </Link>
+                  )}
                 </div>
               </Card>
             ))}

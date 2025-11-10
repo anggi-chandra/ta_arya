@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
       .from('events')
       .select('*', { count: 'exact' })
     
-    // Filter by status (default to upcoming for homepage)
+    // Filter by status (only if status parameter is provided)
+    // If no status, show all events
     const now = new Date().toISOString()
     if (status) {
       if (status === 'upcoming') {
@@ -31,10 +32,8 @@ export async function GET(request: NextRequest) {
       } else if (status === 'completed') {
         query = query.lt('ends_at', now)
       }
-    } else {
-      // Default: show upcoming events
-      query = query.gt('starts_at', now)
     }
+    // No else clause - if no status, show all events
     
     // Search functionality
     if (search) {
@@ -50,8 +49,19 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('Error fetching events:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('Query details:', { status, search, page, limit })
+      return NextResponse.json({ 
+        error: error.message || 'Failed to fetch events',
+        details: error 
+      }, { status: 500 })
     }
+    
+    console.log('Public API - Fetched events:', { 
+      count: events?.length || 0, 
+      total: count || 0, 
+      status: status || 'all',
+      hasEvents: !!(events && events.length > 0)
+    })
     
     // Get participant counts for each event
     if (events && events.length > 0) {

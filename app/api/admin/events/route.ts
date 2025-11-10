@@ -152,7 +152,8 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       ends_at,
       max_participants,
       price_cents = 0,
-      live_url
+      live_url,
+      status = 'upcoming'
     } = body
 
     if (!title || !starts_at) {
@@ -182,6 +183,10 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       )
     }
 
+    // Validate status
+    const validStatuses = ['draft', 'upcoming', 'ongoing', 'completed', 'cancelled']
+    const eventStatus = validStatuses.includes(status) ? status : 'upcoming'
+
     const { data, error } = await supabase
       .from('events')
       .insert({
@@ -195,6 +200,7 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
         max_participants,
         price_cents,
         live_url,
+        status: eventStatus,
         created_by: user.id
       })
       .select()

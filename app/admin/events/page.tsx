@@ -20,6 +20,7 @@ type EventItem = {
   price_cents?: number;
   event_stats?: { participants?: number } | null;
   live_url?: string;
+  status?: 'draft' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 };
 
 async function fetchAdminEvents(page: number, limit: number, search: string, status: string) {
@@ -90,6 +91,7 @@ export default function AdminEventsPage() {
   const [newMaxParticipants, setNewMaxParticipants] = useState<number | "">("");
   const [newPriceCents, setNewPriceCents] = useState<number | "">("");
   const [newLiveUrl, setNewLiveUrl] = useState("");
+  const [newStatus, setNewStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -104,6 +106,7 @@ export default function AdminEventsPage() {
   const [editMaxParticipants, setEditMaxParticipants] = useState<number | "">("");
   const [editPriceCents, setEditPriceCents] = useState<number | "">("");
   const [editLiveUrl, setEditLiveUrl] = useState("");
+  const [editStatus, setEditStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
 
   const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
@@ -149,6 +152,7 @@ export default function AdminEventsPage() {
         // Convert Rupiah to cents (multiply by 100)
         price_cents: newPriceCents ? Number(newPriceCents) * 100 : 0,
         live_url: newLiveUrl || undefined,
+        status: newStatus,
       });
     },
     onSuccess: () => {
@@ -166,6 +170,7 @@ export default function AdminEventsPage() {
       setNewMaxParticipants("");
       setNewPriceCents("");
       setNewLiveUrl("");
+      setNewStatus("upcoming");
     },
   });
 
@@ -189,6 +194,7 @@ export default function AdminEventsPage() {
         // Convert Rupiah to cents (multiply by 100)
         price_cents: editPriceCents ? Number(editPriceCents) * 100 : 0,
         live_url: editLiveUrl || undefined,
+        status: editStatus,
       });
     },
     onSuccess: () => {
@@ -391,6 +397,27 @@ export default function AdminEventsPage() {
               value={newLiveUrl} 
               onChange={(e) => setNewLiveUrl(e.target.value)}
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              Status Event *
+            </label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value as "draft" | "upcoming" | "ongoing" | "completed" | "cancelled")}
+              className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+              required
+            >
+              <option value="draft">Draft (Tidak Dipublikasikan)</option>
+              <option value="upcoming">Akan Datang</option>
+              <option value="ongoing">Sedang Berlangsung</option>
+              <option value="completed">Selesai</option>
+              <option value="cancelled">Dibatalkan</option>
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Pilih status event. Draft tidak akan muncul di halaman publik.
+            </p>
           </div>
         </div>
         <div className="mt-4 flex gap-2">
@@ -621,6 +648,22 @@ export default function AdminEventsPage() {
                             onChange={(e) => setEditPriceCents(e.target.value ? Number(e.target.value) : "")}
                             min="0"
                           />
+                          <div>
+                            <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
+                              Status
+                            </label>
+                            <select
+                              value={editStatus}
+                              onChange={(e) => setEditStatus(e.target.value as "draft" | "upcoming" | "ongoing" | "completed" | "cancelled")}
+                              className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                            >
+                              <option value="draft">Draft</option>
+                              <option value="upcoming">Akan Datang</option>
+                              <option value="ongoing">Berlangsung</option>
+                              <option value="completed">Selesai</option>
+                              <option value="cancelled">Dibatalkan</option>
+                            </select>
+                          </div>
                         </div>
                       ) : (
                         <div>
@@ -651,6 +694,7 @@ export default function AdminEventsPage() {
                             // Convert cents to Rupiah for display (divide by 100)
                             setEditPriceCents(ev.price_cents ? ev.price_cents / 100 : "");
                             setEditLiveUrl(ev.live_url || "");
+                            setEditStatus((ev.status as "draft" | "upcoming" | "ongoing" | "completed" | "cancelled") || "upcoming");
                           }}
                         >
                           Edit

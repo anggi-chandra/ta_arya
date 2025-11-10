@@ -84,7 +84,8 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       ends_at,
       max_participants,
       price_cents,
-      live_url
+      live_url,
+      status
     } = body
 
     // Validate dates if provided
@@ -100,6 +101,10 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       }
     }
 
+    // Validate status if provided
+    const validStatuses = ['draft', 'upcoming', 'ongoing', 'completed', 'cancelled']
+    const eventStatus = status && validStatuses.includes(status) ? status : undefined
+
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
@@ -111,6 +116,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     if (max_participants !== undefined) updateData.max_participants = max_participants
     if (price_cents !== undefined) updateData.price_cents = price_cents
     if (live_url !== undefined) updateData.live_url = live_url
+    if (eventStatus !== undefined) updateData.status = eventStatus
 
     const { data, error } = await supabase
       .from('events')

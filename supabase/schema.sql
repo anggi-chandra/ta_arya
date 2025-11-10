@@ -56,6 +56,7 @@ create table if not exists public.events (
   ends_at timestamptz,
   max_participants int,
   price_cents int default 0,
+  status text default 'upcoming' check (status in ('draft', 'upcoming', 'ongoing', 'completed', 'cancelled')),
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz default now()
 );
