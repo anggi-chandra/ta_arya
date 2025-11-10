@@ -166,19 +166,46 @@ export function withNextAuthSession(handler: Function, requiredRole?: string) {
 
 // Admin only middleware
 export function withAdminAuth(handler: Function) {
-  return withAuth(handler, 'admin')
+  return async (req: NextRequest, context?: any) => {
+    try {
+      // Use NextAuth session instead of mock user
+      const user = await getCurrentUserFromSession(req)
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized - Please sign in' },
+          { status: 401 }
+        )
+      }
+
+      if (!isAdmin(user)) {
+        return NextResponse.json(
+          { error: 'Forbidden - Admin access required' },
+          { status: 403 }
+        )
+      }
+
+      return await handler(req, user, context)
+    } catch (error) {
+      console.error('Admin auth middleware error:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
+  }
 }
 
 // Moderator or admin middleware
 export function withModeratorAuth(handler: Function) {
   return async (req: NextRequest, context?: any) => {
     try {
-      const authHeader = req.headers.get('authorization') ?? undefined
-      const user = await getCurrentUser(authHeader)
+      // Use NextAuth session instead of mock user
+      const user = await getCurrentUserFromSession(req)
       
       if (!user) {
         return NextResponse.json(
-          { error: 'Unauthorized' },
+          { error: 'Unauthorized - Please sign in' },
           { status: 401 }
         )
       }

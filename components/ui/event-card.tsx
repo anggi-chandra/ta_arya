@@ -40,19 +40,32 @@ export function EventCard({
 
   return (
     <Card className="overflow-hidden transition-all hover:shadow-lg">
-      <div className="relative h-48 w-full">
+      <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-800">
         <div className={`absolute top-2 right-2 z-10 rounded-full px-3 py-1 text-xs font-medium ${statusColors[status]}`}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </div>
-        <Image
-          src={image}
-          alt={title}
-          fill
-          className="object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "/window.svg";
-          }}
-        />
+        {image && (image.startsWith('http') || image.startsWith('//')) ? (
+          // External image - use regular img tag
+          <img
+            src={image}
+            alt={title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/images/hero-esports.svg";
+            }}
+          />
+        ) : (
+          // Internal image - use Next.js Image component
+          <Image
+            src={image || "/images/hero-esports.svg"}
+            alt={title}
+            fill
+            className="object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/images/hero-esports.svg";
+            }}
+          />
+        )}
       </div>
       <div className="p-4">
         <h3 className="text-lg font-bold line-clamp-1">{title}</h3>

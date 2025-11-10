@@ -344,6 +344,10 @@ alter table if exists public.forum_topics
 alter table if exists public.events
   add column if not exists game text;
 
+-- Events: add live_url for streaming/live event links
+alter table if exists public.events
+  add column if not exists live_url text;
+
 -- Notification functions and triggers
 -- Create notifications automatically when important rows are inserted
 
@@ -542,3 +546,90 @@ from public.tournaments t
 left join public.tournament_participants p on p.tournament_id = t.id
 left join public.tournament_matches m on m.tournament_id = t.id
 group by t.id, t.title;
+
+-- ============================================================================
+-- STORAGE BUCKET POLICIES
+-- ============================================================================
+-- Storage policies for 'uploads' bucket
+-- Note: Bucket 'uploads' must be created in Supabase Storage dashboard first
+-- 
+-- IMPORTANT: 
+-- - If using service_role key in API routes, these policies may not be needed
+--   as service_role bypasses all RLS policies
+-- - These policies provide additional security layer
+-- - See supabase/storage-policies.sql for detailed setup instructions
+-- ============================================================================
+
+-- Policy 1: Allow public read access to uploads bucket
+-- Anyone can view/download files from the uploads bucket (for displaying images)
+CREATE POLICY IF NOT EXISTS "Allow public read access to uploads"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'uploads');
+
+-- Policy 2: Allow authenticated users to upload files to uploads bucket
+-- Only authenticated users (logged in users) can upload files
+CREATE POLICY IF NOT EXISTS "Allow authenticated uploads to uploads"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'uploads');
+
+-- Policy 3: Allow authenticated users to update files in uploads bucket
+-- Authenticated users can update/replace files in the bucket
+CREATE POLICY IF NOT EXISTS "Allow authenticated users to update uploads"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (bucket_id = 'uploads')
+WITH CHECK (bucket_id = 'uploads');
+
+-- Policy 4: Allow authenticated users to delete files in uploads bucket
+-- Authenticated users can delete files from the bucket
+CREATE POLICY IF NOT EXISTS "Allow authenticated users to delete uploads"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (bucket_id = 'uploads');
+
+-- ============================================================================
+-- ALTERNATIVE: Admin/Moderator Only Policies (More Secure)
+-- ============================================================================
+-- Uncomment the policies below and comment out policies above if you want
+-- only admins/moderators to manage uploads
+
+-- DROP POLICY IF EXISTS "Allow authenticated uploads to uploads" ON storage.objects;
+-- DROP POLICY IF EXISTS "Allow authenticated users to update uploads" ON storage.objects;
+-- DROP POLICY IF EXISTS "Allow authenticated users to delete uploads" ON storage.objects;
+
+-- Policy: Allow admins and moderators to manage all uploads
+-- CREATE POLICY IF NOT EXISTS "Allow admins to manage all uploads"
+-- ON storage.objects
+-- FOR ALL
+-- TO authenticated
+-- USING (
+--   bucket_id = 'uploads' 
+--   AND EXISTS (
+--     SELECT 1 FROM public.user_roles ur 
+--     WHERE ur.user_id = auth.uid() 
+--     AND ur.role IN ('admin', 'moderator')
+--   )
+-- )
+-- WITH CHECK (
+--   bucket_id = 'uploads' 
+--   AND EXISTS (
+--     SELECT 1 FROM public.user_roles ur 
+--     WHERE ur.user_id = auth.uid() 
+--     AND ur.role IN ('admin', 'moderator')
+--   )
+-- );
+
+-- ============================================================================
+-- NOTES:
+-- ============================================================================
+-- 1. Bucket Creation: Create 'uploads' bucket in Supabase Storage dashboard first
+-- 2. Service Role Key: If using service_role key, policies are optional but recommended
+-- 3. File Structure: Files stored as uploads/events/, uploads/tournaments/, etc.
+-- 4. For detailed setup instructions, see: supabase/storage-policies.sql
+-- ============================================================================

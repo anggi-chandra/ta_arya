@@ -77,6 +77,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     const {
       title,
       description,
+      game,
       image_url,
       location,
       starts_at,
@@ -102,6 +103,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
+    if (game !== undefined) updateData.game = game
     if (image_url !== undefined) updateData.image_url = image_url
     if (location !== undefined) updateData.location = location
     if (starts_at !== undefined) updateData.starts_at = starts_at

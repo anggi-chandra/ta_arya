@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,47 @@ import { Navbar } from "@/components/ui/navbar";
 import { EventCard } from "@/components/ui/event-card";
 import Footer from "@/components/ui/footer";
 
+interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  location?: string;
+  starts_at: string;
+  ends_at?: string;
+  max_participants?: number;
+  price_cents?: number;
+  game?: string;
+  event_stats?: {
+    participants?: number;
+  } | null;
+}
+
 export default function Home() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/events?status=upcoming&limit=3');
+        if (!response.ok) {
+          throw new Error('Gagal memuat events');
+        }
+        const data = await response.json();
+        setEvents(data.events || []);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchEvents();
+  }, []);
   return (
     <div className="flex flex-col min-h-screen w-full bg-zinc-50 dark:bg-black">
       <Navbar />
@@ -135,41 +176,74 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <EventCard
-              id="ev-1"
-              title="Turnamen Mobile Legends - Season Qualifier"
-              description="Babak kualifikasi untuk menentukan tim terbaik menuju grand final."
-              image="/public/window.svg"
-              date="12 Des 2025"
-              location="Jakarta"
-              participants={32}
-              maxParticipants={64}
-              price={0}
-            />
-            <EventCard
-              id="ev-2"
-              title="Valorant Community Cup"
-              description="Kompetisi komunitas untuk semua level pemain dengan sistem Swiss."
-              image="/public/globe.svg"
-              date="20 Des 2025"
-              location="Bandung"
-              participants={48}
-              maxParticipants={48}
-              price={25000}
-            />
-            <EventCard
-              id="ev-3"
-              title="PUBG Mobile Duo Showdown"
-              description="Format duo dengan map erangel dan hadiah menarik untuk pemenang."
-              image="/public/next.svg"
-              date="05 Jan 2026"
-              location="Online"
-              participants={80}
-              maxParticipants={100}
-              price={0}
-            />
-          </div>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">Memuat events...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">Belum ada event yang tersedia.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {events.map((event) => {
+                // Format date
+                const eventDate = event.starts_at 
+                  ? new Date(event.starts_at).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })
+                  : 'TBA';
+
+                // Get participants count
+                const participants = event.event_stats?.participants || 0;
+                const maxParticipants = event.max_participants || 0;
+
+                // Get price
+                const price = event.price_cents ? event.price_cents / 100 : 0;
+
+                // Get image URL
+                const imageUrl = event.image_url || '/images/hero-esports.svg';
+
+                // Determine status
+                const now = new Date();
+                const startsAt = event.starts_at ? new Date(event.starts_at) : null;
+                const endsAt = event.ends_at ? new Date(event.ends_at) : null;
+                let status: "upcoming" | "ongoing" | "completed" = "upcoming";
+                if (startsAt && endsAt) {
+                  if (now >= startsAt && now <= endsAt) {
+                    status = "ongoing";
+                  } else if (now > endsAt) {
+                    status = "completed";
+                  }
+                } else if (startsAt && now >= startsAt) {
+                  status = "ongoing";
+                }
+
+                return (
+                  <EventCard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    description={event.description || ''}
+                    game={event.game || 'General'}
+                    image={imageUrl}
+                    date={eventDate}
+                    location={event.location || 'TBA'}
+                    participants={participants}
+                    maxParticipants={maxParticipants}
+                    price={price}
+                    status={status}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           <div className="flex justify-center mt-8">
             <Link href="/events">
