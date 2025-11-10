@@ -15,18 +15,10 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
   const offset = (page - 1) * limit
 
   try {
-    // Build query for users with profiles and roles
+    // Fetch profiles first (without relationship to avoid PostgREST issues)
     let query = supabase
       .from('profiles')
-      .select(`
-        *,
-        user_roles (
-          id,
-          role,
-          granted_at,
-          granted_by
-        )
-      `)
+      .select('*', { count: 'exact' })
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false })
 
@@ -35,43 +27,86 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
       query = query.or(`full_name.ilike.%${search}%,username.ilike.%${search}%`)
     }
 
-    const { data: users, error: usersError } = await query
+    const { data: profiles, error: profilesError, count } = await query
 
-    if (usersError) {
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError)
+      console.error('Query details:', { page, limit, search, offset })
       return NextResponse.json(
-        { error: 'Failed to fetch users' },
+        { error: `Failed to fetch users: ${profilesError.message}` },
         { status: 500 }
       )
     }
 
-    // Get total count for pagination
-    let countQuery = supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
+    console.log('Fetched profiles:', { count: profiles?.length || 0, total: count || 0, search })
 
-    if (search) {
-      countQuery = countQuery.or(`full_name.ilike.%${search}%,username.ilike.%${search}%`)
-    }
+    // Fetch roles separately for all users
+    let usersWithRoles = profiles || []
+    if (profiles && profiles.length > 0) {
+      const userIds = profiles.map((p: any) => p.id)
+      
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('id, role, granted_at, granted_by, user_id')
+        .in('user_id', userIds)
 
-    const { count, error: countError } = await countQuery
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError)
+        // Don't fail, just continue without roles
+      }
 
-    if (countError) {
-      return NextResponse.json(
-        { error: 'Failed to count users' },
-        { status: 500 }
-      )
+      // Combine profiles with roles
+      // If user has no roles, assign default 'user' role
+      usersWithRoles = profiles.map((profile: any) => {
+        const userRoles = rolesData?.filter((r: any) => r.user_id === profile.id).map((r: any) => ({
+          id: r.id,
+          role: r.role,
+          granted_at: r.granted_at,
+          granted_by: r.granted_by
+        })) || []
+        
+        // If no roles found, add default 'user' role
+        if (userRoles.length === 0) {
+          userRoles.push({
+            id: 'default',
+            role: 'user',
+            granted_at: profile.created_at || new Date().toISOString(),
+            granted_by: null
+          })
+        }
+        
+        return {
+          ...profile,
+          user_roles: userRoles
+        }
+      })
+    } else if (profiles && profiles.length === 0) {
+      // No profiles found
+      console.log('No profiles found in database')
+      usersWithRoles = []
+    } else {
+      // Profiles exist but no roles data - assign default role
+      usersWithRoles = (profiles || []).map((profile: any) => ({
+        ...profile,
+        user_roles: [{
+          id: 'default',
+          role: 'user',
+          granted_at: profile.created_at || new Date().toISOString(),
+          granted_by: null
+        }]
+      }))
     }
 
     // Filter by role if specified
-    let filteredUsers = users
+    let filteredUsers = usersWithRoles
     if (role) {
-      filteredUsers = users?.filter(user => 
+      filteredUsers = usersWithRoles.filter((user: any) => 
         user.user_roles?.some((r: any) => r.role === role)
-      ) || []
+      )
     }
 
     return NextResponse.json({
-      users: filteredUsers,
+      users: filteredUsers || [],
       pagination: {
         page,
         limit,
@@ -79,10 +114,11 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
         totalPages: Math.ceil((count || 0) / limit)
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching users:', error)
+    console.error('Error stack:', error?.stack)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error?.message || 'Internal server error' },
       { status: 500 }
     )
   }

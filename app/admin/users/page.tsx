@@ -16,14 +16,27 @@ async function fetchUsers(search: string) {
   params.set("page", "1");
   if (search) params.set("search", search);
 
-  const res = await fetch(`/api/admin/users?${params.toString()}`);
-  if (!res.ok) throw new Error("Gagal memuat data pengguna");
+  const res = await fetch(`/api/admin/users?${params.toString()}`, {
+    credentials: 'include'
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Gagal memuat data pengguna");
+  }
+  
   return res.json() as Promise<{ users: Profile[] }>
 }
 
 async function deleteUser(id: string) {
-  const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Gagal menghapus pengguna");
+  const res = await fetch(`/api/admin/users/${id}`, { 
+    method: "DELETE",
+    credentials: 'include'
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Gagal menghapus pengguna");
+  }
   return res.json();
 }
 
@@ -62,9 +75,27 @@ export default function AdminUsersPage() {
       </div>
 
       <Card className="p-4">
-        {isLoading && <p>Memuat pengguna...</p>}
-        {error && <p className="text-red-500">{(error as Error).message}</p>}
-        {!isLoading && users.length === 0 && <p>Tidak ada pengguna.</p>}
+        {isLoading && <p className="text-gray-600 dark:text-gray-400">Memuat pengguna...</p>}
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-600 dark:text-red-400 font-medium">Error:</p>
+            <p className="text-red-500 dark:text-red-300 text-sm mt-1">{(error as Error).message}</p>
+            <button 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-users"] })} 
+              className="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+        {!isLoading && !error && users.length === 0 && (
+          <div className="p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400">Tidak ada pengguna.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+              {search ? 'Coba ubah kata kunci pencarian.' : 'Belum ada pengguna terdaftar.'}
+            </p>
+          </div>
+        )}
         {!isLoading && users.length > 0 && (
           <table className="w-full text-left">
             <thead>
@@ -79,8 +110,13 @@ export default function AdminUsersPage() {
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-gray-100 dark:border-gray-800">
                   <td className="py-2">{u.full_name || "-"}</td>
-                  <td className="py-2">{u.username || "-"}</td>
-                  <td className="py-2">{u.user_roles?.map(r => r.role).join(", ") || "user"}</td>
+                  <td className="py-2">{u.username || u.id.substring(0, 8) || "-"}</td>
+                  <td className="py-2">
+                    {u.user_roles && u.user_roles.length > 0 
+                      ? u.user_roles.map((r: UserRole) => r.role).join(", ")
+                      : "user"
+                    }
+                  </td>
                   <td className="py-2">
                     <Button
                       variant="destructive"
