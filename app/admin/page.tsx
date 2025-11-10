@@ -4,8 +4,10 @@ import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
 import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
 
 const quickActions = [
   { 
@@ -60,13 +62,15 @@ async function fetchStats() {
     });
     const eventsData = eventsRes.ok ? await eventsRes.json() : { pagination: { total: 0 } };
     
-    // Fetch users count (if API exists)
-    // const usersRes = await fetch('/api/admin/users?page=1&limit=1', { credentials: 'include' });
-    // const usersData = usersRes.ok ? await usersRes.json() : { pagination: { total: 0 } };
+    // Fetch users count
+    const usersRes = await fetch('/api/admin/users?page=1&limit=1', { 
+      credentials: 'include' 
+    });
+    const usersData = usersRes.ok ? await usersRes.json() : { pagination: { total: 0 } };
     
     return {
       events: eventsData.pagination?.total || 0,
-      users: 0, // TODO: Implement users API
+      users: usersData.pagination?.total || 0,
       tournaments: 0, // TODO: Implement tournaments API
       reports: 0, // TODO: Implement reports API
     };
@@ -81,7 +85,7 @@ async function fetchStats() {
   }
 }
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const { data: session } = useSession();
   const pathname = usePathname();
   
@@ -104,7 +108,7 @@ export default function AdminDashboard() {
               const Icon = action.icon;
               // Check if current path matches the action href (exact match or starts with for nested routes)
               const isActive = pathname === action.href || 
-                (action.href !== "/" && pathname.startsWith(action.href));
+                (action.href !== "/" && pathname?.startsWith(action.href));
               
               return (
                 <Link key={action.href} href={action.href}>
@@ -232,4 +236,54 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+}
+
+// Dynamic import with no SSR to avoid usePathname context issues
+const AdminDashboardClient = dynamic(() => Promise.resolve(AdminDashboardContent), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col lg:flex-row gap-6">
+      <div className="w-full lg:w-80 flex-shrink-0">
+        <Card className="p-4 lg:sticky lg:top-6">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            Aksi Cepat
+          </h2>
+          <div className="space-y-2">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Link key={action.href} href={action.href}>
+                  <div className="p-3 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <div className="flex items-start gap-3">
+                      <Icon className="h-5 w-5 mt-0.5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white">
+                          {action.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {action.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+          Admin Dashboard
+        </h1>
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          Memuat...
+        </div>
+      </div>
+    </div>
+  ),
+});
+
+export default function AdminDashboard() {
+  return <AdminDashboardClient />;
 }
