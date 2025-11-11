@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
@@ -8,7 +9,16 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-xl font-bold">EsportsHub</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <Image 
+                src="/logo.png" 
+                alt="Bagoes Esports Logo" 
+                width={32} 
+                height={32} 
+                className="object-contain"
+              />
+              <h3 className="text-xl font-bold">Bagoes Esports</h3>
+            </div>
             <p className="mt-4 text-gray-300">
               Platform manajemen event esports terbaik untuk komunitas gaming Indonesia.
             </p>
@@ -42,7 +52,7 @@ export default function Footer() {
         </div>
         <div className="mt-8 pt-8 border-t border-gray-700">
           <p className="text-gray-300 text-center">
-            &copy; {new Date().getFullYear()} EsportsHub. Hak Cipta Dilindungi.
+            &copy; {new Date().getFullYear()} Bagoes Esports. Hak Cipta Dilindungi.
           </p>
         </div>
       </div>

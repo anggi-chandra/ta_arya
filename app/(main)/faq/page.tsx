@@ -34,14 +34,14 @@ export default function FAQPage() {
     // Umum
     {
       id: "faq-1",
-      question: "Bagaimana cara mendaftar akun di EsportsHub?",
-      answer: "Untuk mendaftar akun di EsportsHub, klik tombol 'Daftar' di pojok kanan atas halaman. Isi formulir pendaftaran dengan informasi yang diperlukan seperti nama, email, dan kata sandi. Setelah itu, Anda akan menerima email konfirmasi untuk mengaktifkan akun Anda.",
+      question: "Bagaimana cara mendaftar akun di Bagoes Esports?",
+      answer: "Untuk mendaftar akun di Bagoes Esports, klik tombol 'Daftar' di pojok kanan atas halaman. Isi formulir pendaftaran dengan informasi yang diperlukan seperti nama, email, dan kata sandi. Setelah itu, Anda akan menerima email konfirmasi untuk mengaktifkan akun Anda.",
       category: "umum"
     },
     {
       id: "faq-2",
-      question: "Apakah mendaftar di EsportsHub gratis?",
-      answer: "Ya, pendaftaran akun di EsportsHub sepenuhnya gratis. Anda dapat mengakses sebagian besar fitur platform tanpa biaya. Namun, beberapa turnamen premium atau fitur khusus mungkin memerlukan biaya pendaftaran terpisah.",
+      question: "Apakah mendaftar di Bagoes Esports gratis?",
+      answer: "Ya, pendaftaran akun di Bagoes Esports sepenuhnya gratis. Anda dapat mengakses sebagian besar fitur platform tanpa biaya. Namun, beberapa turnamen premium atau fitur khusus mungkin memerlukan biaya pendaftaran terpisah.",
       category: "umum"
     },
     {
@@ -117,9 +117,9 @@ export default function FAQPage() {
     {
       id: "guide-1",
       title: "Cara Mendaftar Turnamen",
-      description: "Panduan lengkap untuk mendaftar turnamen di EsportsHub",
+      description: "Panduan lengkap untuk mendaftar turnamen di Bagoes Esports",
       steps: [
-        "Masuk ke akun EsportsHub Anda",
+        "Masuk ke akun Bagoes Esports Anda",
         "Kunjungi halaman 'Turnamen' dan pilih turnamen yang ingin diikuti",
         "Klik tombol 'Daftar' pada halaman detail turnamen",
         "Pilih apakah Anda mendaftar sebagai individu atau tim",
@@ -136,7 +136,7 @@ export default function FAQPage() {
       title: "Cara Membuat Tim",
       description: "Langkah-langkah untuk membuat dan mengelola tim esports Anda",
       steps: [
-        "Masuk ke akun EsportsHub Anda",
+        "Masuk ke akun Bagoes Esports Anda",
         "Kunjungi halaman 'Dashboard' dan pilih 'Tim Saya'",
         "Klik tombol 'Buat Tim Baru'",
         "Isi informasi tim seperti nama, logo, dan deskripsi",
@@ -153,7 +153,7 @@ export default function FAQPage() {
       title: "Cara Menggunakan Forum Diskusi",
       description: "Panduan untuk berpartisipasi dalam forum diskusi komunitas",
       steps: [
-        "Masuk ke akun EsportsHub Anda",
+        "Masuk ke akun Bagoes Esports Anda",
         "Kunjungi halaman 'Komunitas' dan pilih tab 'Forum Diskusi'",
         "Jelajahi kategori forum yang tersedia atau gunakan pencarian untuk menemukan topik",
         "Untuk membuat topik baru, klik tombol 'Buat Topik Baru'",
@@ -170,7 +170,7 @@ export default function FAQPage() {
       title: "Cara Mengelola Profil Pengguna",
       description: "Panduan untuk mengatur dan memperbarui profil Anda",
       steps: [
-        "Masuk ke akun EsportsHub Anda",
+        "Masuk ke akun Bagoes Esports Anda",
         "Klik pada ikon profil di pojok kanan atas dan pilih 'Profil Saya'",
         "Untuk mengedit profil, klik tombol 'Edit Profil'",
         "Perbarui informasi pribadi seperti nama, bio, dan foto profil",
@@ -187,7 +187,7 @@ export default function FAQPage() {
       title: "Cara Mengikuti Streaming Turnamen",
       description: "Panduan untuk menonton streaming langsung turnamen",
       steps: [
-        "Masuk ke akun EsportsHub Anda (opsional, Anda dapat menonton tanpa login)",
+        "Masuk ke akun Bagoes Esports Anda (opsional, Anda dapat menonton tanpa login)",
         "Kunjungi halaman 'Turnamen' dan pilih turnamen yang sedang berlangsung",
         "Klik tab 'Live Stream' pada halaman detail turnamen",
         "Pilih stream yang ingin Anda tonton jika ada beberapa stream tersedia",

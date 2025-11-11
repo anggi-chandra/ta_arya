@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "./button";
 import { cn } from "@/lib/utils";
@@ -105,9 +106,19 @@ export function Navbar() {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-20 relative">
           {/* Left: Brand */}
-          <div className="flex items-center justify-start">
-            <Link href="/" className="text-3xl font-bold text-primary">
-              EsportsHub
+          <div className="flex items-center justify-start gap-3">
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <Image 
+                src="/logo.png" 
+                alt="Bagoes Esports Logo" 
+                width={40} 
+                height={40} 
+                className="object-contain"
+                priority
+              />
+              <span className="text-2xl font-bold text-primary">
+                Bagoes Esports
+              </span>
             </Link>
           </div>
 

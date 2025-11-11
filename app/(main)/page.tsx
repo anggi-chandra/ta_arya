@@ -22,28 +22,30 @@ export default function HomePage() {
               objectFit: 'cover',
               width: '100%',
               height: '100%',
-              minHeight: '100%'
+              minHeight: '100%',
+              filter: 'brightness(1.1) contrast(1.05)'
             }}
           >
             <source src="/hero-video-2.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          {/* Overlay untuk meningkatkan kontras teks */}
-          <div className="absolute inset-0 bg-black/40"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"></div>
+          {/* Overlay sangat ringan - video lebih terlihat, hanya overlay tipis untuk kontras teks */}
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/20"></div>
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="md:w-1/2 mb-10 md:mb-0 z-10">
-              <div className="inline-flex items-center px-4 py-2 bg-blue-500/20 rounded-full text-blue-200 text-sm font-medium mb-6">
+              <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6 shadow-lg border border-white/20">
                 🏆 Platform Esports #1 di Indonesia
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                Wujudkan Impian
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"> Esports</span> Anda
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-2xl">
+                <span className="text-white">Wujudkan Impian</span>
+                <span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent drop-shadow-lg"> Esports</span>
+                <span className="text-white"> Anda</span>
               </h1>
-              <p className="text-xl mb-8 text-gray-200 leading-relaxed">
+              <p className="text-xl mb-8 text-white/95 leading-relaxed drop-shadow-lg">
                 Bergabunglah dengan komunitas esports terbesar di Indonesia. Ikuti turnamen, bentuk tim impian, dan raih prestasi tertinggi dalam dunia gaming kompetitif.
               </p>
               <div className="flex flex-wrap gap-4">

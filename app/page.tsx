@@ -81,7 +81,8 @@ export default function Home() {
               width: '100%',
               height: '100%',
               minHeight: '100%',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              filter: 'brightness(1.1) contrast(1.05)'
             }}
             onError={(e) => {
               console.error('Video error:', e);
@@ -92,19 +93,19 @@ export default function Home() {
           </video>
           {/* Fallback gradient jika video gagal dimuat */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 video-fallback hidden"></div>
-          {/* Overlay untuk meningkatkan kontras teks */}
-          <div className="absolute inset-0 bg-black/50"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"></div>
+          {/* Overlay sangat ringan - video lebih terlihat, hanya overlay tipis untuk kontras teks */}
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/20"></div>
         </div>
         <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-20 relative z-10 w-full">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-blue-200 text-xs mb-4">
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs mb-4 shadow-lg border border-white/20">
               🏆 Platform Manajemen Esports Terdepan
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight drop-shadow-2xl">
               Kelola Tim, Event, dan Turnamen dengan Mudah
             </h1>
-            <p className="text-white/80 text-lg md:text-xl mb-8 leading-relaxed">
+            <p className="text-white/95 text-lg md:text-xl mb-8 leading-relaxed drop-shadow-lg">
               Bangun komunitas esports Anda, atur kompetisi, dan raih prestasi dengan dashboard yang lengkap dan modern.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -295,7 +296,7 @@ export default function Home() {
         {/* Why Choose Us */}
         <section>
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-black dark:text-zinc-50">Mengapa Memilih EsportsHub?</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-black dark:text-zinc-50">Mengapa Memilih Bagoes Esports?</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Platform terpercaya dengan teknologi terdepan untuk komunitas esports Indonesia
             </p>
@@ -337,7 +338,7 @@ export default function Home() {
             Siap Memulai Perjalanan Esports Anda?
           </h3>
           <p className="text-white/90 text-base md:text-lg mb-8 max-w-2xl mx-auto">
-            Bergabunglah dengan ribuan pemain dan tim yang sudah merasakan kemudahan mengelola esports dengan EsportsHub
+            Bergabunglah dengan ribuan pemain dan tim yang sudah merasakan kemudahan mengelola esports dengan Bagoes Esports
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register">

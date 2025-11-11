@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -43,8 +44,15 @@ export default function DashboardLayout({
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
           <div className="flex items-center flex-shrink-0 px-4 mb-5">
-            <Link href="/" className="text-xl font-bold text-primary">
-              EsportsHub
+            <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary">
+              <Image 
+                src="/logo.png" 
+                alt="Bagoes Esports Logo" 
+                width={28} 
+                height={28} 
+                className="object-contain"
+              />
+              <span>Bagoes Esports</span>
             </Link>
           </div>
           <div className="px-4 mb-6">
