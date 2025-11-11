@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/auth'
 
-import { getToken } from 'next-auth/jwt'
-
-// GET /api/tournaments - Get all tournaments
+// GET /api/tournaments - Get all tournaments (public access)
 export async function GET(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-
-  const supabaseToken = typeof token?.supabaseAccessToken === 'string' ? token!.supabaseAccessToken : ''
-  if (!supabaseToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const supabase = getSupabaseClient(supabaseToken)
+  // Use service role key for public access to tournaments
+  const supabase = getSupabaseClient()
   
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
@@ -22,31 +15,26 @@ export async function GET(request: NextRequest) {
   try {
     let query = supabase.from('tournaments').select('*', { count: 'exact' })
     
-    // Filter by status
+    // Filter by status from database field
     if (status) {
-      const now = new Date().toISOString()
-      if (status === 'upcoming') {
-        query = query.gt('starts_at', now)
-      } else if (status === 'ongoing') {
-        query = query.lte('starts_at', now).gte('ends_at', now)
-      } else if (status === 'completed') {
-        query = query.lt('ends_at', now)
-      }
+      query = query.eq('status', status)
     }
+    // If no status filter, show all tournaments (upcoming, ongoing, completed)
+    // Cancelled tournaments are excluded by default for public page
     
     // Search functionality
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,location.ilike.%${search}%`)
     }
     
     // Pagination
-    const from = (page - 1) * limit
-    const to = from + limit - 1
-    query = query.range(from, to).order('starts_at', { ascending: false })
+    const offset = (page - 1) * limit
+    query = query.range(offset, offset + limit - 1).order('created_at', { ascending: false })
     
     const { data: tournaments, error, count } = await query
     
     if (error) {
+      console.error('Error fetching tournaments:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
@@ -61,8 +49,8 @@ export async function GET(request: NextRequest) {
         totalPages
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching tournaments:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 })
   }
 }

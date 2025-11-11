@@ -15,7 +15,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const router = useRouter();
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [event, setEvent] = useState<any | null>(null);
+  const [tournament, setTournament] = useState<any | null>(null);
   const [registeredCount, setRegisteredCount] = useState<number>(0);
   
   // Data dummy untuk fallback UI
@@ -95,22 +95,29 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   }, [session, tournamentId]);
 
-  // Fetch event data dari API dan hitung jumlah registrasi via Supabase
+  // Fetch tournament data dari database
   useEffect(() => {
     const fetchTournamentData = async () => {
       try {
-        const response = await fetch(`/api/events/${tournamentId}`);
-        if (response.ok) {
-          const { event } = await response.json();
-          setEvent(event);
+        // Fetch tournament dari tabel tournaments
+        const { data: tournamentData, error: tournamentError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('id', tournamentId)
+          .single();
+
+        if (tournamentError) {
+          console.error('Error fetching tournament:', tournamentError);
+          return;
         }
 
-        // Ambil jumlah peserta terdaftar
+        setTournament(tournamentData);
+
+        // Ambil jumlah peserta terdaftar dari tournament_participants
         const { count } = await supabase
-          .from('event_registrations')
-          .select('id', { count: 'exact', head: true })
-          .eq('event_id', tournamentId)
-          .eq('status', 'registered');
+          .from('tournament_participants')
+          .select('tournament_id', { count: 'exact', head: true })
+          .eq('tournament_id', tournamentId);
         setRegisteredCount(count || 0);
       } catch (error) {
         console.error('Error fetching tournament data:', error);
@@ -122,14 +129,35 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   // Fungsi untuk memeriksa status registrasi
   const checkRegistrationStatus = async () => {
+    if (!session?.user?.id) return;
+    
     try {
-      const response = await fetch(`/api/events/${tournamentId}/register`, {
-        method: 'GET',
-      });
-      const data = await response.json();
-      setIsRegistered(data.registered);
+      // Check if user's team is registered for this tournament
+      // First, get user's teams
+      const { data: userTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', session.user.id);
+      
+      if (!userTeams || userTeams.length === 0) {
+        setIsRegistered(false);
+        return;
+      }
+      
+      const teamIds = userTeams.map((ut: any) => ut.team_id);
+      
+      // Check if any of user's teams is registered
+      const { data: registration } = await supabase
+        .from('tournament_participants')
+        .select('tournament_id, team_id')
+        .eq('tournament_id', tournamentId)
+        .in('team_id', teamIds)
+        .maybeSingle();
+      
+      setIsRegistered(!!registration);
     } catch (error) {
       console.error('Error checking registration status:', error);
+      setIsRegistered(false);
     }
   };
 
@@ -142,17 +170,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/events/${tournamentId}/register`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        setIsRegistered(true);
-        alert('Berhasil mendaftar turnamen!');
-      } else {
-        const error = await response.json();
-        alert(`Gagal mendaftar: ${error.error}`);
-      }
+      // For tournaments, registration is done via teams
+      // User needs to have a team first
+      alert('Untuk mendaftar turnamen, Anda perlu memiliki tim. Silakan buat tim terlebih dahulu.');
+      router.push('/teams');
     } catch (error) {
       console.error('Error registering for tournament:', error);
       alert('Terjadi kesalahan saat mendaftar');
@@ -163,22 +184,40 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   // Fungsi untuk membatalkan pendaftaran
   const unregisterFromTournament = async () => {
+    if (!session?.user?.id) return;
+    
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/events/${tournamentId}/register`, {
-        method: 'DELETE',
-      });
+      // Get user's teams
+      const { data: userTeams } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', session.user.id);
       
-      if (response.ok) {
-        setIsRegistered(false);
-        alert('Pendaftaran dibatalkan!');
-      } else {
-        const error = await response.json();
-        alert(`Gagal membatalkan: ${error.error}`);
+      if (!userTeams || userTeams.length === 0) {
+        alert('Anda tidak memiliki tim terdaftar');
+        return;
       }
-    } catch (error) {
+      
+      const teamIds = userTeams.map((ut: any) => ut.team_id);
+      
+      // Remove registration
+      const { error } = await supabase
+        .from('tournament_participants')
+        .delete()
+        .eq('tournament_id', tournamentId)
+        .in('team_id', teamIds);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setIsRegistered(false);
+      setRegisteredCount((prev) => Math.max(0, prev - 1));
+      alert('Pendaftaran dibatalkan!');
+    } catch (error: any) {
       console.error('Error unregistering from tournament:', error);
-      alert('Terjadi kesalahan saat membatalkan pendaftaran');
+      alert(`Gagal membatalkan: ${error.message || 'Terjadi kesalahan'}`);
     } finally {
       setIsLoading(false);
     }
@@ -189,18 +228,19 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       {/* Header Turnamen */}
       <div className="relative rounded-lg overflow-hidden h-64 mb-8">
         <Image 
-          src={event?.image_url || tournamentDetail.image} 
-          alt={event?.title || tournamentDetail.name}
+          src={tournament?.banner_url || tournamentDetail.image} 
+          alt={tournament?.title || tournamentDetail.name}
           fill
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
         <div className="absolute bottom-0 left-0 p-6">
-          <h1 className="text-3xl font-bold text-white mb-2">{event?.title || tournamentDetail.name}</h1>
-          <div className="flex items-center text-white">
-            <span className="bg-blue-600 px-3 py-1 rounded-full text-sm mr-3">{(event as any)?.game || tournamentDetail.game}</span>
+          <h1 className="text-3xl font-bold text-white mb-2">{tournament?.title || tournamentDetail.name}</h1>
+          <div className="flex items-center text-white flex-wrap gap-2">
+            <span className="bg-blue-600 px-3 py-1 rounded-full text-sm">{tournament?.game || tournamentDetail.game}</span>
+            <span className="bg-purple-600 px-3 py-1 rounded-full text-sm">{tournament?.tournament_type?.replace('_', ' ') || ''}</span>
             <span className="bg-green-600 px-3 py-1 rounded-full text-sm">
-              {event?.starts_at ? new Date(event.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}
+              {tournament?.starts_at ? new Date(tournament.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}
             </span>
           </div>
         </div>
@@ -248,48 +288,76 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="p-6 col-span-2">
                 <h2 className="text-xl font-bold mb-4">Deskripsi Turnamen</h2>
-                <p className="text-gray-700 mb-6">{event?.description || tournamentDetail.description}</p>
+                <p className="text-gray-700 dark:text-gray-300 mb-6">{tournament?.description || tournamentDetail.description}</p>
                 
                 <h3 className="text-lg font-semibold mb-3">Informasi Turnamen</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-gray-600 mb-1">Game:</p>
-                    <p className="font-medium">{(event as any)?.game || tournamentDetail.game}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Game:</p>
+                    <p className="font-medium">{tournament?.game || tournamentDetail.game}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 mb-1">Lokasi:</p>
-                    <p className="font-medium">{event?.location || tournamentDetail.location}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tipe Turnamen:</p>
+                    <p className="font-medium">{tournament?.tournament_type?.replace('_', ' ') || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 mb-1">Tanggal:</p>
-                    <p className="font-medium">{event?.starts_at ? new Date(event.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Format:</p>
+                    <p className="font-medium">{tournament?.format || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 mb-1">Waktu:</p>
-                    <p className="font-medium">{event?.starts_at ? new Date(event.starts_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : tournamentDetail.time}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Lokasi:</p>
+                    <p className="font-medium">{tournament?.location || tournamentDetail.location}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 mb-1">Biaya Pendaftaran:</p>
-                    <p className="font-medium">{(event as any)?.price_cents ? `Rp ${(((event as any).price_cents)/100).toLocaleString('id-ID')}` : 'Gratis'}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal Mulai:</p>
+                    <p className="font-medium">{tournament?.starts_at ? new Date(tournament.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}</p>
                   </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal Selesai:</p>
+                    <p className="font-medium">{tournament?.ends_at ? new Date(tournament.ends_at).toLocaleDateString('id-ID') : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Waktu Mulai:</p>
+                    <p className="font-medium">{tournament?.starts_at ? new Date(tournament.starts_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : tournamentDetail.time}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Entry Fee:</p>
+                    <p className="font-medium">{tournament?.entry_fee && tournament.entry_fee > 0 ? `Rp ${tournament.entry_fee.toLocaleString('id-ID')}` : 'Gratis'}</p>
+                  </div>
+                  {tournament?.prize_pool && tournament.prize_pool > 0 && (
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-400 mb-1">Prize Pool:</p>
+                      <p className="font-medium text-yellow-600">Rp {tournament.prize_pool.toLocaleString('id-ID')}</p>
+                    </div>
+                  )}
                 </div>
               </Card>
 
               <Card className="p-6">
                 <h2 className="text-xl font-bold mb-4">Informasi Pendaftaran</h2>
                 <div className="mb-4">
-                  <p className="text-gray-600 mb-1">Batas Pendaftaran:</p>
-                  <p className="font-medium">{tournamentDetail.registrationDeadline}</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1">Batas Pendaftaran:</p>
+                  <p className="font-medium">
+                    {tournament?.registration_deadline 
+                      ? new Date(tournament.registration_deadline).toLocaleDateString('id-ID', { 
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric' 
+                        })
+                      : tournamentDetail.registrationDeadline}
+                  </p>
                 </div>
                 <div className="mb-4">
-                  <p className="text-gray-600 mb-1">Slot Tim:</p>
-                  <p className="font-medium">{registeredCount} / {event?.max_participants || tournamentDetail.maxTeams}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full" 
-                      style={{ width: `${Math.min(((event?.max_participants ? (registeredCount / event.max_participants) : 0) * 100), 100)}%` }}
-                    ></div>
-                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1">Slot Tim:</p>
+                  <p className="font-medium">{registeredCount} / {tournament?.max_participants || tournamentDetail.maxTeams}</p>
+                  {tournament?.max_participants && tournament.max_participants > 0 && (
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full" 
+                        style={{ width: `${Math.min(((registeredCount / tournament.max_participants) * 100), 100)}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
                 <div className="mb-4">
                   <p className="text-gray-600 mb-1">Penyelenggara:</p>
@@ -402,11 +470,21 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div>
             <h2 className="text-xl font-bold mb-4">Peraturan Turnamen</h2>
             <Card className="p-6">
-              <ul className="list-disc pl-5 space-y-2">
-                {tournamentDetail.rules.map((rule, index) => (
-                  <li key={index} className="text-gray-700">{rule}</li>
-                ))}
-              </ul>
+              {tournament?.rules ? (
+                <div className="prose dark:prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 font-sans">
+                    {tournament.rules}
+                  </pre>
+                </div>
+              ) : tournamentDetail.rules ? (
+                <ul className="list-disc pl-5 space-y-2">
+                  {tournamentDetail.rules.map((rule, index) => (
+                    <li key={index} className="text-gray-700 dark:text-gray-300">{rule}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Tidak ada peraturan yang tersedia.</p>
+              )}
             </Card>
           </div>
         )}

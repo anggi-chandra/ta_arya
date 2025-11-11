@@ -41,7 +41,14 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any) => {
       )
     }
 
-    console.log('Fetched tournaments:', { count: tournaments?.length, total: count, status, search })
+    console.log('Fetched tournaments:', { 
+      fetched: tournaments?.length || 0, 
+      total: count || 0, 
+      status: status || 'all',
+      search: search || 'none',
+      page,
+      limit
+    })
 
     // Get participant counts for each tournament (from tournament_registrations if exists)
     // For now, we'll just return the tournaments as is

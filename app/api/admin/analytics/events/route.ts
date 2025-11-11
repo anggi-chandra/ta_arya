@@ -18,7 +18,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
     // Get event creation trends
     const { data: eventTrends, error: trendsError } = await supabase
       .from('events')
-      .select('created_at, game, max_participants')
+      .select('created_at, game')
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: true })
 
@@ -35,8 +35,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
         event:events (
           id,
           title,
-          game,
-          max_participants
+          game
         )
       `)
       .gte('created_at', startDate.toISOString())
@@ -48,7 +47,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
     // Get events by status
     const { data: eventsByStatus, error: statusError } = await supabase
       .from('events')
-      .select('id, status, start_date, end_date')
+      .select('id, status, starts_at, ends_at')
 
     if (statusError) {
       console.error('Error fetching events by status:', statusError)
@@ -160,15 +159,18 @@ function processEventStatus(events: any[]) {
   }
 
   events.forEach(event => {
-    const startDate = new Date(event.start_date)
-    const endDate = new Date(event.end_date)
+    if (!event.starts_at) return
+    const startDate = new Date(event.starts_at)
+    const endDate = event.ends_at ? new Date(event.ends_at) : null
 
     if (now < startDate) {
       statusCount.upcoming++
-    } else if (now >= startDate && now <= endDate) {
+    } else if (endDate && now >= startDate && now <= endDate) {
       statusCount.ongoing++
-    } else {
+    } else if (endDate && now > endDate) {
       statusCount.completed++
+    } else if (!endDate && now >= startDate) {
+      statusCount.ongoing++
     }
   })
 
@@ -231,34 +233,43 @@ async function getTopPerformingEvents(supabase: any, startDate: Date) {
   try {
     const { data: topEvents, error } = await supabase
       .from('events')
-      .select(`
-        id,
-        title,
-        game,
-        max_participants,
-        event_registrations (
-          id,
-          status
-        )
-      `)
+      .select('id, title, game, created_at')
       .gte('created_at', startDate.toISOString())
-      .limit(5)
+      .limit(10)
 
     if (error) {
       console.error('Error fetching top events:', error)
       return []
     }
 
-    return topEvents?.map((event: any) => ({
-      id: event.id,
-      title: event.title,
-      game: event.game,
-      maxParticipants: event.max_participants,
-      registrations: event.event_registrations?.length || 0,
-      fillRate: event.max_participants > 0 ? 
-        ((event.event_registrations?.length || 0) / event.max_participants * 100).toFixed(1) : '0'
-    }))
-    .sort((a: any, b: any) => b.registrations - a.registrations) || []
+    if (!topEvents || topEvents.length === 0) {
+      return []
+    }
+
+    // Get registration counts for each event
+    const eventIds = topEvents.map((e: any) => e.id)
+    const { data: registrations } = await supabase
+      .from('event_registrations')
+      .select('event_id')
+      .in('event_id', eventIds)
+
+    // Count registrations per event
+    const registrationCounts: Record<string, number> = {}
+    if (registrations) {
+      registrations.forEach((reg: any) => {
+        registrationCounts[reg.event_id] = (registrationCounts[reg.event_id] || 0) + 1
+      })
+    }
+
+    return topEvents
+      .map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        game: event.game || 'Unknown',
+        registrations: registrationCounts[event.id] || 0
+      }))
+      .sort((a: any, b: any) => b.registrations - a.registrations)
+      .slice(0, 5) || []
   } catch (error) {
     console.error('Error in getTopPerformingEvents:', error)
     return []

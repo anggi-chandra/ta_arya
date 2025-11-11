@@ -68,12 +68,30 @@ async function fetchStats() {
     });
     const usersData = usersRes.ok ? await usersRes.json() : { pagination: { total: 0 } };
     
-    return {
+    // Fetch tournaments count
+    const tournamentsRes = await fetch('/api/admin/tournaments?page=1&limit=1', {
+      credentials: 'include'
+    });
+    
+    let tournamentsData = { pagination: { total: 0 } };
+    if (tournamentsRes.ok) {
+      tournamentsData = await tournamentsRes.json();
+      console.log('Tournaments API response:', tournamentsData);
+    } else {
+      const errorText = await tournamentsRes.text();
+      console.error('Error fetching tournaments:', tournamentsRes.status, errorText);
+    }
+    
+    const stats = {
       events: eventsData.pagination?.total || 0,
       users: usersData.pagination?.total || 0,
-      tournaments: 0, // TODO: Implement tournaments API
+      tournaments: tournamentsData.pagination?.total || 0,
       reports: 0, // TODO: Implement reports API
     };
+    
+    console.log('Dashboard stats:', stats);
+    
+    return stats;
   } catch (error) {
     console.error('Error fetching stats:', error);
     return {
