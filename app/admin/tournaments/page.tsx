@@ -210,6 +210,23 @@ export default function AdminTournamentsPage() {
       if (editBannerFile) {
         bannerUrl = await uploadMutation.mutateAsync(editBannerFile);
       }
+      
+      // Convert datetime-local to ISO string if provided
+      let startsAtISO = editStartsAt;
+      if (editStartsAt && editStartsAt.length === 16) {
+        startsAtISO = new Date(editStartsAt).toISOString();
+      }
+      
+      let endsAtISO = editEndsAt;
+      if (editEndsAt && editEndsAt.length === 16) {
+        endsAtISO = new Date(editEndsAt).toISOString();
+      }
+      
+      let registrationDeadlineISO = editRegistrationDeadline;
+      if (editRegistrationDeadline && editRegistrationDeadline.length === 16) {
+        registrationDeadlineISO = new Date(editRegistrationDeadline).toISOString();
+      }
+      
       return updateTournament(editingId, {
         title: editTitle,
         description: editDescription || undefined,
@@ -217,13 +234,13 @@ export default function AdminTournamentsPage() {
         tournament_type: editTournamentType,
         format: editFormat,
         max_participants: typeof editMaxParticipants === "number" ? editMaxParticipants : undefined,
-        prize_pool: typeof editPrizePool === "number" ? editPrizePool : undefined,
+        prize_pool: editPrizePool === "" ? 0 : (typeof editPrizePool === "number" ? editPrizePool : 0),
         currency: editCurrency,
-        entry_fee: typeof editEntryFee === "number" ? editEntryFee : undefined,
+        entry_fee: editEntryFee === "" ? 0 : (typeof editEntryFee === "number" ? editEntryFee : 0),
         location: editLocation || undefined,
-        starts_at: editStartsAt,
-        ends_at: editEndsAt || undefined,
-        registration_deadline: editRegistrationDeadline,
+        starts_at: startsAtISO,
+        ends_at: endsAtISO || undefined,
+        registration_deadline: registrationDeadlineISO,
         status: editStatus,
         rules: editRules || undefined,
         banner_url: bannerUrl || undefined,
@@ -232,8 +249,13 @@ export default function AdminTournamentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] }); // Refresh dashboard stats
       setEditingId(null);
       setEditBannerFile(null);
+      alert("Turnamen berhasil diperbarui!");
+    },
+    onError: (error: Error) => {
+      alert(`Gagal memperbarui turnamen: ${error.message}`);
     },
   });
 
@@ -668,8 +690,12 @@ export default function AdminTournamentsPage() {
                            />
                            <Input
                              value={editPrizePool}
-                             onChange={(e) => setEditPrizePool(e.target.value ? Number(e.target.value) : "")}
+                             onChange={(e) => {
+                               const val = e.target.value;
+                               setEditPrizePool(val === "" ? "" : Number(val));
+                             }}
                              type="number"
+                             min="0"
                              placeholder="Prize Pool"
                              className="text-xs"
                            />
@@ -733,13 +759,14 @@ export default function AdminTournamentsPage() {
                              setEditGame(t.game || "");
                              setEditTournamentType(t.tournament_type || 'single_elimination');
                              setEditFormat(t.format || '5v5');
-                             setEditStartsAt(t.starts_at ? t.starts_at.slice(0, 16) : "");
-                             setEditEndsAt(t.ends_at ? t.ends_at.slice(0, 16) : "");
-                             setEditRegistrationDeadline(t.registration_deadline ? t.registration_deadline.slice(0, 16) : "");
-                             setEditMaxParticipants(t.max_participants || "");
-                             setEditPrizePool(t.prize_pool || "");
+                            // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+                            setEditStartsAt(t.starts_at ? new Date(t.starts_at).toISOString().slice(0, 16) : "");
+                            setEditEndsAt(t.ends_at ? new Date(t.ends_at).toISOString().slice(0, 16) : "");
+                            setEditRegistrationDeadline(t.registration_deadline ? new Date(t.registration_deadline).toISOString().slice(0, 16) : "");
+                             setEditMaxParticipants(t.max_participants ?? "");
+                             setEditPrizePool(t.prize_pool ?? 0);
                              setEditCurrency(t.currency || "IDR");
-                             setEditEntryFee(t.entry_fee || "");
+                             setEditEntryFee(t.entry_fee ?? 0);
                              setEditRules(t.rules || "");
                              setEditStatus(t.status || 'upcoming');
                            }}

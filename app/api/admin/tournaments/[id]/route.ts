@@ -4,8 +4,7 @@ import { withModeratorAuth } from '@/lib/auth'
 
 // GET /api/admin/tournaments/[id] - Get specific tournament
 export const GET = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const tournamentId = params.id
 
   try {
@@ -34,8 +33,7 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // PUT /api/admin/tournaments/[id] - Update tournament
 export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const tournamentId = params.id
 
   try {
@@ -59,10 +57,34 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       banner_url
     } = body
 
+    // Convert datetime-local strings to ISO strings if provided
+    let startsAtISO = starts_at
+    let endsAtISO = ends_at
+    let registrationDeadlineISO = registration_deadline
+
+    if (starts_at) {
+      // If it's in datetime-local format (YYYY-MM-DDTHH:mm), convert to ISO
+      if (starts_at.length === 16) {
+        startsAtISO = new Date(starts_at).toISOString()
+      }
+    }
+
+    if (ends_at) {
+      if (ends_at.length === 16) {
+        endsAtISO = new Date(ends_at).toISOString()
+      }
+    }
+
+    if (registration_deadline) {
+      if (registration_deadline.length === 16) {
+        registrationDeadlineISO = new Date(registration_deadline).toISOString()
+      }
+    }
+
     // Validate dates if provided
-    if (starts_at && ends_at) {
-      const startDate = new Date(starts_at)
-      const endDate = new Date(ends_at)
+    if (startsAtISO && endsAtISO) {
+      const startDate = new Date(startsAtISO)
+      const endDate = new Date(endsAtISO)
 
       if (endDate <= startDate) {
         return NextResponse.json(
@@ -72,9 +94,9 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       }
     }
 
-    if (starts_at && registration_deadline) {
-      const startDate = new Date(starts_at)
-      const regDeadline = new Date(registration_deadline)
+    if (startsAtISO && registrationDeadlineISO) {
+      const startDate = new Date(startsAtISO)
+      const regDeadline = new Date(registrationDeadlineISO)
 
       if (regDeadline >= startDate) {
         return NextResponse.json(
@@ -98,22 +120,37 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
 
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
+    if (description !== undefined) updateData.description = description || null
     if (game !== undefined) updateData.game = game
     if (validTournamentType !== undefined) updateData.tournament_type = validTournamentType
     if (validFormat !== undefined) updateData.format = validFormat
-    if (max_participants !== undefined) updateData.max_participants = parseInt(max_participants)
-    if (prize_pool !== undefined) updateData.prize_pool = parseInt(prize_pool) || 0
-    if (currency !== undefined) updateData.currency = currency
-    if (entry_fee !== undefined) updateData.entry_fee = parseInt(entry_fee) || 0
-    if (location !== undefined) updateData.location = location
-    if (starts_at !== undefined) updateData.starts_at = starts_at
-    if (ends_at !== undefined) updateData.ends_at = ends_at
-    if (registration_deadline !== undefined) updateData.registration_deadline = registration_deadline
+    if (max_participants !== undefined && max_participants !== null) {
+      updateData.max_participants = parseInt(String(max_participants))
+    }
+    // Always update prize_pool if provided (even if 0)
+    if (prize_pool !== undefined && prize_pool !== null) {
+      const prizePoolNum = parseInt(String(prize_pool))
+      updateData.prize_pool = isNaN(prizePoolNum) ? 0 : prizePoolNum
+    }
+    if (currency !== undefined) updateData.currency = currency || 'IDR'
+    // Always update entry_fee if provided (even if 0)
+    if (entry_fee !== undefined && entry_fee !== null) {
+      const entryFeeNum = parseInt(String(entry_fee))
+      updateData.entry_fee = isNaN(entryFeeNum) ? 0 : entryFeeNum
+    }
+    if (location !== undefined) updateData.location = location || null
+    if (startsAtISO !== undefined) updateData.starts_at = startsAtISO
+    if (endsAtISO !== undefined) updateData.ends_at = endsAtISO || null
+    if (registrationDeadlineISO !== undefined) updateData.registration_deadline = registrationDeadlineISO
     if (tournamentStatus !== undefined) updateData.status = tournamentStatus
-    if (rules !== undefined) updateData.rules = rules
-    if (banner_url !== undefined) updateData.banner_url = banner_url
+    if (rules !== undefined) updateData.rules = rules || null
+    if (banner_url !== undefined) updateData.banner_url = banner_url || null
     updateData.updated_at = new Date().toISOString()
+    
+    console.log('Update data for tournament:', updateData)
+    console.log('Prize pool value:', prize_pool, '->', updateData.prize_pool)
+
+    console.log('Updating tournament:', tournamentId, 'with data:', updateData)
 
     const { data, error } = await supabase
       .from('tournaments')
@@ -144,8 +181,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // DELETE /api/admin/tournaments/[id] - Delete tournament
 export const DELETE = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const tournamentId = params.id
 
   try {

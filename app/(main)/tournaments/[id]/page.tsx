@@ -6,17 +6,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { TournamentBracket } from "@/components/ui/tournament-bracket";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-export default function TournamentDetailPage({ params }: { params: { id: string } }) {
-  const tournamentId = params.id;
+export default function TournamentDetailPage() {
+  const params = useParams();
+  const tournamentId = params.id as string;
   const { data: session } = useSession();
   const router = useRouter();
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [tournament, setTournament] = useState<any | null>(null);
   const [registeredCount, setRegisteredCount] = useState<number>(0);
+  const [isLoadingTournament, setIsLoadingTournament] = useState(true);
+  const [organizer, setOrganizer] = useState<any | null>(null);
   
   // Data dummy untuk fallback UI
   const tournamentDetail = {
@@ -95,32 +98,70 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   }, [session, tournamentId]);
 
-  // Fetch tournament data dari database
+  // Fetch tournament data dari API
   useEffect(() => {
+    if (!tournamentId) {
+      console.error('Tournament ID is missing');
+      setIsLoadingTournament(false);
+      return;
+    }
+
     const fetchTournamentData = async () => {
       try {
-        // Fetch tournament dari tabel tournaments
-        const { data: tournamentData, error: tournamentError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .eq('id', tournamentId)
-          .single();
-
-        if (tournamentError) {
-          console.error('Error fetching tournament:', tournamentError);
+        setIsLoadingTournament(true);
+        console.log('Fetching tournament:', tournamentId);
+        
+        // Fetch tournament dari API route with cache-busting timestamp
+        const timestamp = Date.now();
+        const response = await fetch(`/api/tournaments/${tournamentId}?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+        
+        console.log('API response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Error fetching tournament:', errorData.error || 'Failed to fetch tournament');
+          console.error('Response status:', response.status);
+          setTournament(null);
+          setIsLoadingTournament(false);
           return;
         }
 
-        setTournament(tournamentData);
+        const data = await response.json();
+        console.log('Tournament data received:', data);
+        const tournamentData = data.tournament;
 
-        // Ambil jumlah peserta terdaftar dari tournament_participants
-        const { count } = await supabase
-          .from('tournament_participants')
-          .select('tournament_id', { count: 'exact', head: true })
-          .eq('tournament_id', tournamentId);
-        setRegisteredCount(count || 0);
+        if (!tournamentData) {
+          console.error('Tournament data is null in response');
+          setTournament(null);
+          setIsLoadingTournament(false);
+          return;
+        }
+
+        console.log('Setting tournament:', tournamentData.id, tournamentData.title);
+        console.log('Prize pool from API:', tournamentData.prize_pool, 'Currency:', tournamentData.currency);
+        setTournament(tournamentData);
+        
+        // Set participant count from API response
+        if (tournamentData.registeredCount !== undefined) {
+          setRegisteredCount(tournamentData.registeredCount);
+        } else {
+          setRegisteredCount(0);
+        }
+
+        // Set organizer from API response
+        if (tournamentData.organizer) {
+          setOrganizer(tournamentData.organizer);
+        }
       } catch (error) {
         console.error('Error fetching tournament data:', error);
+        setTournament(null);
+      } finally {
+        setIsLoadingTournament(false);
       }
     };
 
@@ -223,25 +264,76 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   };
 
+  if (isLoadingTournament) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="p-6 text-center">
+          <p className="text-gray-500 dark:text-gray-400">Memuat detail turnamen...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="p-6 text-center">
+          <p className="text-red-600 dark:text-red-400">Turnamen tidak ditemukan.</p>
+          <Link href="/tournaments" className="text-blue-600 hover:underline mt-4 inline-block">
+            Kembali ke Daftar Turnamen
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header Turnamen */}
       <div className="relative rounded-lg overflow-hidden h-64 mb-8">
         <Image 
-          src={tournament?.banner_url || tournamentDetail.image} 
-          alt={tournament?.title || tournamentDetail.name}
+          src={tournament.banner_url || tournamentDetail.image} 
+          alt={tournament.title || tournamentDetail.name}
           fill
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
         <div className="absolute bottom-0 left-0 p-6">
-          <h1 className="text-3xl font-bold text-white mb-2">{tournament?.title || tournamentDetail.name}</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{tournament.title || tournamentDetail.name}</h1>
           <div className="flex items-center text-white flex-wrap gap-2">
-            <span className="bg-blue-600 px-3 py-1 rounded-full text-sm">{tournament?.game || tournamentDetail.game}</span>
-            <span className="bg-purple-600 px-3 py-1 rounded-full text-sm">{tournament?.tournament_type?.replace('_', ' ') || ''}</span>
-            <span className="bg-green-600 px-3 py-1 rounded-full text-sm">
-              {tournament?.starts_at ? new Date(tournament.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}
-            </span>
+            {tournament.game && (
+              <span className="bg-blue-600 px-3 py-1 rounded-full text-sm">{tournament.game}</span>
+            )}
+            {tournament.tournament_type && (
+              <span className="bg-purple-600 px-3 py-1 rounded-full text-sm">
+                {tournament.tournament_type.replace('_', ' ')}
+              </span>
+            )}
+            {tournament.format && (
+              <span className="bg-orange-600 px-3 py-1 rounded-full text-sm">{tournament.format}</span>
+            )}
+            {tournament.starts_at && (
+              <span className="bg-green-600 px-3 py-1 rounded-full text-sm">
+                {new Date(tournament.starts_at).toLocaleDateString('id-ID', { 
+                  day: 'numeric', 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
+              </span>
+            )}
+            {tournament.status && (
+              <span className={`px-3 py-1 rounded-full text-sm ${
+                tournament.status === 'upcoming' ? 'bg-yellow-600' :
+                tournament.status === 'ongoing' ? 'bg-green-600' :
+                tournament.status === 'completed' ? 'bg-gray-600' :
+                'bg-red-600'
+              }`}>
+                {tournament.status === 'upcoming' ? 'Akan Datang' :
+                 tournament.status === 'ongoing' ? 'Berlangsung' :
+                 tournament.status === 'completed' ? 'Selesai' :
+                 'Dibatalkan'}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -288,46 +380,96 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="p-6 col-span-2">
                 <h2 className="text-xl font-bold mb-4">Deskripsi Turnamen</h2>
-                <p className="text-gray-700 dark:text-gray-300 mb-6">{tournament?.description || tournamentDetail.description}</p>
+                <p className="text-gray-700 dark:text-gray-300 mb-6 whitespace-pre-wrap">
+                  {tournament.description || 'Tidak ada deskripsi tersedia.'}
+                </p>
                 
                 <h3 className="text-lg font-semibold mb-3">Informasi Turnamen</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Game:</p>
-                    <p className="font-medium">{tournament?.game || tournamentDetail.game}</p>
+                    <p className="font-medium">{tournament.game || '-'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Tipe Turnamen:</p>
-                    <p className="font-medium">{tournament?.tournament_type?.replace('_', ' ') || '-'}</p>
+                    <p className="font-medium">
+                      {tournament.tournament_type 
+                        ? tournament.tournament_type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Format:</p>
-                    <p className="font-medium">{tournament?.format || '-'}</p>
+                    <p className="font-medium">{tournament.format || '-'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Lokasi:</p>
-                    <p className="font-medium">{tournament?.location || tournamentDetail.location}</p>
+                    <p className="font-medium">{tournament.location || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal Mulai:</p>
-                    <p className="font-medium">{tournament?.starts_at ? new Date(tournament.starts_at).toLocaleDateString('id-ID') : tournamentDetail.date}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal & Waktu Mulai:</p>
+                    <p className="font-medium">
+                      {tournament.starts_at 
+                        ? `${new Date(tournament.starts_at).toLocaleDateString('id-ID', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric',
+                            weekday: 'long'
+                          })} pukul ${new Date(tournament.starts_at).toLocaleTimeString('id-ID', { 
+                            hour: '2-digit', 
+                            minute: '2-digit'
+                          })} WIB`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal Selesai:</p>
-                    <p className="font-medium">{tournament?.ends_at ? new Date(tournament.ends_at).toLocaleDateString('id-ID') : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-1">Waktu Mulai:</p>
-                    <p className="font-medium">{tournament?.starts_at ? new Date(tournament.starts_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : tournamentDetail.time}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Tanggal & Waktu Selesai:</p>
+                    <p className="font-medium">
+                      {tournament.ends_at 
+                        ? `${new Date(tournament.ends_at).toLocaleDateString('id-ID', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric',
+                            weekday: 'long'
+                          })} pukul ${new Date(tournament.ends_at).toLocaleTimeString('id-ID', { 
+                            hour: '2-digit', 
+                            minute: '2-digit'
+                          })} WIB`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Entry Fee:</p>
-                    <p className="font-medium">{tournament?.entry_fee && tournament.entry_fee > 0 ? `Rp ${tournament.entry_fee.toLocaleString('id-ID')}` : 'Gratis'}</p>
+                    <p className="font-medium">
+                      {tournament.entry_fee && tournament.entry_fee > 0 
+                        ? `${tournament.currency || 'IDR'} ${tournament.entry_fee.toLocaleString('id-ID')}` 
+                        : 'Gratis'}
+                    </p>
                   </div>
-                  {tournament?.prize_pool && tournament.prize_pool > 0 && (
+                  {tournament.prize_pool !== undefined && tournament.prize_pool !== null && (
                     <div>
                       <p className="text-gray-600 dark:text-gray-400 mb-1">Prize Pool:</p>
-                      <p className="font-medium text-yellow-600">Rp {tournament.prize_pool.toLocaleString('id-ID')}</p>
+                      <p className="font-medium text-yellow-600">
+                        {tournament.currency || 'IDR'} {typeof tournament.prize_pool === 'number' ? tournament.prize_pool.toLocaleString('id-ID') : tournament.prize_pool}
+                      </p>
+                    </div>
+                  )}
+                  {tournament.status && (
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-400 mb-1">Status:</p>
+                      <p className="font-medium">
+                        <span className={`px-2 py-1 rounded text-sm ${
+                          tournament.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                          tournament.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          tournament.status === 'completed' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                          {tournament.status === 'upcoming' ? 'Akan Datang' :
+                           tournament.status === 'ongoing' ? 'Berlangsung' :
+                           tournament.status === 'completed' ? 'Selesai' :
+                           'Dibatalkan'}
+                        </span>
+                      </p>
                     </div>
                   )}
                 </div>
@@ -335,101 +477,160 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
               <Card className="p-6">
                 <h2 className="text-xl font-bold mb-4">Informasi Pendaftaran</h2>
-                <div className="mb-4">
-                  <p className="text-gray-600 dark:text-gray-400 mb-1">Batas Pendaftaran:</p>
-                  <p className="font-medium">
-                    {tournament?.registration_deadline 
-                      ? new Date(tournament.registration_deadline).toLocaleDateString('id-ID', { 
-                          day: 'numeric', 
-                          month: 'long', 
-                          year: 'numeric' 
-                        })
-                      : tournamentDetail.registrationDeadline}
-                  </p>
-                </div>
+                {tournament.registration_deadline && (
+                  <div className="mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Batas Pendaftaran:</p>
+                    <p className="font-medium">
+                      {new Date(tournament.registration_deadline).toLocaleDateString('id-ID', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric',
+                        weekday: 'long'
+                      })} pukul {new Date(tournament.registration_deadline).toLocaleTimeString('id-ID', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                      })} WIB
+                    </p>
+                    {new Date(tournament.registration_deadline) < new Date() && (
+                      <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                        Pendaftaran sudah ditutup
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="mb-4">
                   <p className="text-gray-600 dark:text-gray-400 mb-1">Slot Tim:</p>
-                  <p className="font-medium">{registeredCount} / {tournament?.max_participants || tournamentDetail.maxTeams}</p>
-                  {tournament?.max_participants && tournament.max_participants > 0 && (
+                  <p className="font-medium">{registeredCount} / {tournament.max_participants || 0}</p>
+                  {tournament.max_participants && tournament.max_participants > 0 && (
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
                       <div 
-                        className="bg-blue-600 h-2.5 rounded-full" 
+                        className="bg-blue-600 h-2.5 rounded-full transition-all" 
                         style={{ width: `${Math.min(((registeredCount / tournament.max_participants) * 100), 100)}%` }}
                       ></div>
                     </div>
                   )}
                 </div>
+                {tournament.currency && (
+                  <div className="mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Mata Uang:</p>
+                    <p className="font-medium">{tournament.currency}</p>
+                  </div>
+                )}
                 <div className="mb-4">
-                  <p className="text-gray-600 mb-1">Penyelenggara:</p>
-                  <p className="font-medium">{tournamentDetail.organizer}</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1">Entry Fee:</p>
+                  <p className="font-medium">
+                    {tournament.entry_fee && tournament.entry_fee > 0 
+                      ? `${tournament.currency || 'IDR'} ${tournament.entry_fee.toLocaleString('id-ID')}` 
+                      : 'Gratis'}
+                  </p>
                 </div>
-                <div className="mb-6">
-                  <p className="text-gray-600 mb-1">Kontak:</p>
-                  <p className="font-medium">{tournamentDetail.contact}</p>
-                </div>
-                {!session ? (
-                  <Link href="/auth/signin" className="block w-full">
-                    <span className="w-full inline-block text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-                      Login untuk Mendaftar
-                    </span>
-                  </Link>
-                ) : isRegistered ? (
-                  <button 
-                    onClick={unregisterFromTournament}
-                    disabled={isLoading}
-                    className="w-full text-center bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-70"
-                  >
-                    {isLoading ? 'Memproses...' : 'Batalkan Pendaftaran'}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={registerForTournament}
-                    disabled={isLoading}
-                    className="w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-70"
-                  >
-                    {isLoading ? 'Memproses...' : 'Daftar Sekarang'}
-                  </button>
+                {tournament.prize_pool !== undefined && tournament.prize_pool !== null && (
+                  <div className="mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Prize Pool:</p>
+                    <p className="font-medium text-yellow-600">
+                      {tournament.currency || 'IDR'} {typeof tournament.prize_pool === 'number' ? tournament.prize_pool.toLocaleString('id-ID') : tournament.prize_pool}
+                    </p>
+                  </div>
+                )}
+                {tournament.status && (
+                  <div className="mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-1">Status Turnamen:</p>
+                    <p className="font-medium">
+                      <span className={`px-2 py-1 rounded text-sm ${
+                        tournament.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        tournament.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        tournament.status === 'completed' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {tournament.status === 'upcoming' ? 'Akan Datang' :
+                         tournament.status === 'ongoing' ? 'Berlangsung' :
+                         tournament.status === 'completed' ? 'Selesai' :
+                         'Dibatalkan'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+                {/* Tombol pendaftaran hanya muncul jika registration deadline belum lewat dan status bukan cancelled/completed */}
+                {tournament.registration_deadline && new Date(tournament.registration_deadline) >= new Date() 
+                  && tournament.status !== 'cancelled' && tournament.status !== 'completed' && (
+                  <>
+                    {!session ? (
+                      <Link href="/auth/signin" className="block w-full">
+                        <span className="w-full inline-block text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                          Login untuk Mendaftar
+                        </span>
+                      </Link>
+                    ) : isRegistered ? (
+                      <button 
+                        onClick={unregisterFromTournament}
+                        disabled={isLoading}
+                        className="w-full text-center bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-70"
+                      >
+                        {isLoading ? 'Memproses...' : 'Batalkan Pendaftaran'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={registerForTournament}
+                        disabled={isLoading || (tournament.max_participants > 0 && registeredCount >= tournament.max_participants)}
+                        className="w-full text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? 'Memproses...' : 
+                         (tournament.max_participants > 0 && registeredCount >= tournament.max_participants) 
+                         ? 'Slot Penuh' 
+                         : 'Daftar Sekarang'}
+                      </button>
+                    )}
+                  </>
+                )}
+                {tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date() && (
+                  <div className="text-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 py-2 rounded-lg">
+                    Pendaftaran sudah ditutup
+                  </div>
                 )}
               </Card>
             </div>
 
-            <Card className="p-6 mt-6">
-              <h2 className="text-xl font-bold mb-4">Sponsor</h2>
-              <div className="flex flex-wrap gap-4">
-                {tournamentDetail.sponsors.map((sponsor, index) => (
-                  <div key={index} className="bg-gray-100 px-4 py-2 rounded-lg">
-                    {sponsor}
-                  </div>
-                ))}
-              </div>
-            </Card>
+            {tournament.rules && tournament.rules.length > 0 && (
+              <Card className="p-6 mt-6">
+                <h2 className="text-xl font-bold mb-4">Ringkasan Aturan</h2>
+                <p className="text-gray-700 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap">
+                  {tournament.rules.length > 200 
+                    ? `${tournament.rules.substring(0, 200)}...` 
+                    : tournament.rules}
+                </p>
+                {tournament.rules.length > 200 && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-2 cursor-pointer hover:underline" onClick={() => setActiveTab('rules')}>
+                    Lihat aturan lengkap di tab "Peraturan" →
+                  </p>
+                )}
+              </Card>
+            )}
           </div>
         )}
 
         {/* Teams Tab */}
         {activeTab === 'teams' && (
           <div>
-            <h2 className="text-xl font-bold mb-4">Tim Peserta</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {tournamentDetail.teams.map((team) => (
-                <Card key={team.id} className="p-4">
-                  <div className="flex items-center">
-                    <div className="relative w-12 h-12 mr-3">
-                      <Image 
-                        src={team.logo} 
-                        alt={team.name}
-                        fill
-                        className="object-cover rounded-full"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{team.name}</h3>
-                      <p className="text-sm text-gray-600">{team.members} anggota</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <h2 className="text-xl font-bold mb-4">
+              Tim Peserta ({registeredCount} / {tournament?.max_participants || 0})
+            </h2>
+            {registeredCount === 0 ? (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500 dark:text-gray-400 mb-2">Belum ada tim yang terdaftar untuk turnamen ini.</p>
+                {tournament?.registration_deadline && new Date(tournament.registration_deadline) > new Date() && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    Pendaftaran masih dibuka hingga {new Date(tournament.registration_deadline).toLocaleDateString('id-ID')}
+                  </p>
+                )}
+              </Card>
+            ) : (
+              <Card className="p-6">
+                <p className="text-gray-500 dark:text-gray-400 text-center">
+                  Daftar tim peserta akan ditampilkan di sini. ({registeredCount} tim terdaftar)
+                </p>
+                {/* TODO: Fetch dan tampilkan daftar tim dari tournament_participants */}
+              </Card>
+            )}
           </div>
         )}
 
@@ -446,21 +647,98 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div>
             <h2 className="text-xl font-bold mb-4">Jadwal Turnamen</h2>
             <div className="space-y-4">
-              {tournamentDetail.schedule.map((item, index) => (
-                <Card key={index} className="p-4">
+              {tournament?.registration_deadline && (
+                <Card className="p-4">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center">
                     <div>
-                      <h3 className="font-semibold text-lg">{item.round}</h3>
-                      <p className="text-gray-600">{item.date}</p>
+                      <h3 className="font-semibold text-lg">Batas Pendaftaran</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {new Date(tournament.registration_deadline).toLocaleDateString('id-ID', { 
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric',
+                          weekday: 'long'
+                        })}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-500 text-sm">
+                        {new Date(tournament.registration_deadline).toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit'
+                        })} WIB
+                      </p>
                     </div>
                     <div className="mt-2 md:mt-0">
-                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                        {item.time}
+                      <span className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 px-3 py-1 rounded-full text-sm">
+                        Deadline
                       </span>
                     </div>
                   </div>
                 </Card>
-              ))}
+              )}
+              
+              {tournament?.starts_at && (
+                <Card className="p-4">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+                    <div>
+                      <h3 className="font-semibold text-lg">Mulai Turnamen</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {new Date(tournament.starts_at).toLocaleDateString('id-ID', { 
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric',
+                          weekday: 'long'
+                        })}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-500 text-sm">
+                        {new Date(tournament.starts_at).toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit'
+                        })} WIB
+                      </p>
+                    </div>
+                    <div className="mt-2 md:mt-0">
+                      <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-3 py-1 rounded-full text-sm">
+                        Mulai
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {tournament?.ends_at && (
+                <Card className="p-4">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+                    <div>
+                      <h3 className="font-semibold text-lg">Selesai Turnamen</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {new Date(tournament.ends_at).toLocaleDateString('id-ID', { 
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric',
+                          weekday: 'long'
+                        })}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-500 text-sm">
+                        {new Date(tournament.ends_at).toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit'
+                        })} WIB
+                      </p>
+                    </div>
+                    <div className="mt-2 md:mt-0">
+                      <span className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 px-3 py-1 rounded-full text-sm">
+                        Selesai
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {!tournament?.starts_at && !tournament?.ends_at && !tournament?.registration_deadline && (
+                <Card className="p-6 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">Jadwal turnamen belum tersedia.</p>
+                </Card>
+              )}
             </div>
           </div>
         )}
@@ -470,20 +748,14 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div>
             <h2 className="text-xl font-bold mb-4">Peraturan Turnamen</h2>
             <Card className="p-6">
-              {tournament?.rules ? (
+              {tournament.rules && tournament.rules.length > 0 ? (
                 <div className="prose dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 font-sans">
+                  <pre className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 font-sans text-base leading-relaxed">
                     {tournament.rules}
                   </pre>
                 </div>
-              ) : tournamentDetail.rules ? (
-                <ul className="list-disc pl-5 space-y-2">
-                  {tournamentDetail.rules.map((rule, index) => (
-                    <li key={index} className="text-gray-700 dark:text-gray-300">{rule}</li>
-                  ))}
-                </ul>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">Tidak ada peraturan yang tersedia.</p>
+                <p className="text-gray-500 dark:text-gray-400">Tidak ada peraturan yang tersedia untuk turnamen ini.</p>
               )}
             </Card>
           </div>
