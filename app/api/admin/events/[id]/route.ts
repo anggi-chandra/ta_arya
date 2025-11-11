@@ -4,22 +4,14 @@ import { withModeratorAuth } from '@/lib/auth'
 
 // GET /api/admin/events/[id] - Get specific event with registrations
 export const GET = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const eventId = params.id
 
   try {
-    // Get event with creator info
+    // Get event
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select(`
-        *,
-        creator:profiles!events_created_by_fkey (
-          full_name,
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('id', eventId)
       .single()
 
@@ -30,31 +22,48 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any, { param
       )
     }
 
-    // Get registrations with user info
+    // Get registrations
     const { data: registrations, error: registrationsError } = await supabase
       .from('event_registrations')
-      .select(`
-        *,
-        user:profiles!event_registrations_user_id_fkey (
-          full_name,
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('event_id', eventId)
       .order('created_at', { ascending: false })
 
     if (registrationsError) {
-      return NextResponse.json(
-        { error: 'Failed to fetch registrations' },
-        { status: 500 }
-      )
+      console.error('Error fetching registrations:', registrationsError)
+    }
+
+    // Get tickets count
+    const { count: ticketsCount, error: ticketsError } = await supabase
+      .from('event_tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .neq('status', 'cancelled')
+
+    if (ticketsError) {
+      console.error('Error fetching tickets count:', ticketsError)
+    }
+
+    // Get creator profile if exists
+    let creator = null
+    if (event.created_by) {
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .eq('id', event.created_by)
+        .single()
+      
+      if (creatorProfile) {
+        creator = creatorProfile
+      }
     }
 
     return NextResponse.json({
       event: {
         ...event,
-        registrations: registrations || []
+        creator,
+        registrations: registrations || [],
+        tickets_count: ticketsCount || 0
       }
     })
   } catch (error) {
@@ -68,8 +77,7 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // PUT /api/admin/events/[id] - Update event
 export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const eventId = params.id
 
   try {
@@ -83,6 +91,10 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       starts_at,
       ends_at,
       price_cents,
+      capacity,
+      ticket_types,
+      check_in_required,
+      tournament_id,
       live_url,
       status
     } = body
@@ -104,17 +116,38 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     const validStatuses = ['draft', 'upcoming', 'ongoing', 'completed', 'cancelled']
     const eventStatus = status && validStatuses.includes(status) ? status : undefined
 
+    // Validate tournament_id if provided
+    if (tournament_id) {
+      const { data: tournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('id', tournament_id)
+        .single()
+      
+      if (tournamentError || !tournament) {
+        return NextResponse.json(
+          { error: 'Invalid tournament_id' },
+          { status: 400 }
+        )
+      }
+    }
+
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
-    if (game !== undefined) updateData.game = game
-    if (image_url !== undefined) updateData.image_url = image_url
-    if (location !== undefined) updateData.location = location
+    if (description !== undefined) updateData.description = description || null
+    if (game !== undefined) updateData.game = game || null
+    if (image_url !== undefined) updateData.image_url = image_url || null
+    if (location !== undefined) updateData.location = location || null
     if (starts_at !== undefined) updateData.starts_at = starts_at
-    if (ends_at !== undefined) updateData.ends_at = ends_at
-    if (price_cents !== undefined) updateData.price_cents = price_cents
-    if (live_url !== undefined) updateData.live_url = live_url
+    if (ends_at !== undefined) updateData.ends_at = ends_at || null
+    if (price_cents !== undefined) updateData.price_cents = price_cents || 0
+    if (capacity !== undefined) updateData.capacity = capacity || null
+    if (ticket_types !== undefined) updateData.ticket_types = ticket_types || null
+    if (check_in_required !== undefined) updateData.check_in_required = check_in_required
+    if (tournament_id !== undefined) updateData.tournament_id = tournament_id || null
+    if (live_url !== undefined) updateData.live_url = live_url || null
     if (eventStatus !== undefined) updateData.status = eventStatus
+    updateData.updated_at = new Date().toISOString()
 
     const { data, error } = await supabase
       .from('events')
@@ -145,8 +178,7 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
 
 // DELETE /api/admin/events/[id] - Delete event
 export const DELETE = withModeratorAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const authHeader = req.headers.get('authorization')
-  const supabase = getSupabaseClient(authHeader?.replace('Bearer ', ''))
+  const supabase = getSupabaseClient()
   const eventId = params.id
 
   try {

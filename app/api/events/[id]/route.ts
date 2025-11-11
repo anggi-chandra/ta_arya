@@ -43,6 +43,20 @@ export async function GET(
 
     const participantCount = registrations?.length || 0
 
+    // Fetch tournament banner if event has tournament_id and no image_url
+    let tournamentBannerUrl: string | null = null
+    if (event.tournament_id && !event.image_url) {
+      const { data: tournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('banner_url, title')
+        .eq('id', event.tournament_id)
+        .single()
+      
+      if (!tournamentError && tournament?.banner_url) {
+        tournamentBannerUrl = tournament.banner_url
+      }
+    }
+
     // Add participant count and status to event
     // Use status from database if exists, otherwise calculate from dates
     const now = new Date()
@@ -73,8 +87,15 @@ export async function GET(
       }
     }
 
+    // Use tournament banner as fallback if event has no image_url
+    const displayImageUrl = event.image_url || tournamentBannerUrl || null
+    const isUsingTournamentBanner = !event.image_url && tournamentBannerUrl !== null
+
     const eventWithStats = {
       ...event,
+      image_url: displayImageUrl, // Override with tournament banner if no image_url
+      tournament_banner_url: tournamentBannerUrl, // Keep original tournament banner for reference
+      is_using_tournament_banner: isUsingTournamentBanner, // Flag to indicate if using tournament banner
       event_stats: {
         participants: participantCount
       },

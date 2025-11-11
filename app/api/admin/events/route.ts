@@ -151,6 +151,10 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       starts_at,
       ends_at,
       price_cents = 0,
+      capacity,
+      ticket_types,
+      check_in_required = true,
+      tournament_id,
       live_url,
       status = 'upcoming'
     } = body
@@ -186,18 +190,38 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
     const validStatuses = ['draft', 'upcoming', 'ongoing', 'completed', 'cancelled']
     const eventStatus = validStatuses.includes(status) ? status : 'upcoming'
 
+    // Validate tournament_id if provided
+    if (tournament_id) {
+      const { data: tournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('id')
+        .eq('id', tournament_id)
+        .single()
+      
+      if (tournamentError || !tournament) {
+        return NextResponse.json(
+          { error: 'Invalid tournament_id' },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data, error } = await supabase
       .from('events')
       .insert({
         title,
-        description,
-        game,
-        image_url,
-        location,
+        description: description || null,
+        game: game || null,
+        image_url: image_url || null,
+        location: location || null,
         starts_at,
-        ends_at,
-        price_cents,
-        live_url,
+        ends_at: ends_at || null,
+        price_cents: price_cents || 0,
+        capacity: capacity || null,
+        ticket_types: ticket_types || null,
+        check_in_required: check_in_required !== undefined ? check_in_required : true,
+        tournament_id: tournament_id || null,
+        live_url: live_url || null,
         status: eventStatus,
         created_by: user.id
       })

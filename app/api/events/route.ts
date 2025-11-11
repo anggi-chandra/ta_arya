@@ -84,13 +84,40 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Add participant counts to events
-      const eventsWithStats = events.map((event: any) => ({
-        ...event,
-        event_stats: {
-          participants: participantCounts[event.id] || 0
+      // Fetch tournament banners for events that have tournament_id but no image_url
+      const eventsWithTournamentId = events.filter((e: any) => e.tournament_id && !e.image_url)
+      const tournamentIds = [...new Set(eventsWithTournamentId.map((e: any) => e.tournament_id))]
+      const tournamentBanners: Record<string, string> = {}
+      
+      if (tournamentIds.length > 0) {
+        const { data: tournaments, error: tournamentError } = await supabase
+          .from('tournaments')
+          .select('id, banner_url')
+          .in('id', tournamentIds)
+        
+        if (!tournamentError && tournaments) {
+          tournaments.forEach((t: any) => {
+            if (t.banner_url) {
+              tournamentBanners[t.id] = t.banner_url
+            }
+          })
         }
-      }))
+      }
+
+      // Add participant counts and tournament banners to events
+      const eventsWithStats = events.map((event: any) => {
+        // Use tournament banner as fallback if event has no image_url
+        const displayImageUrl = event.image_url || tournamentBanners[event.tournament_id] || null
+        
+        return {
+          ...event,
+          image_url: displayImageUrl, // Override with tournament banner if no image_url
+          tournament_banner_url: tournamentBanners[event.tournament_id] || null, // Keep for reference
+          event_stats: {
+            participants: participantCounts[event.id] || 0
+          }
+        }
+      })
       
       const totalPages = count ? Math.ceil(count / limit) : 0
       

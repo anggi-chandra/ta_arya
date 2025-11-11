@@ -45,24 +45,38 @@ create policy "team owners can manage members" on public.team_members for all us
   exists (select 1 from public.teams t where t.id = team_id and t.owner_id = auth.uid())
 );
 
--- Events / Tournaments
+-- Events (for spectators/attendees)
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text,
+  game text,
   image_url text,
   location text,
   starts_at timestamptz not null,
   ends_at timestamptz,
   price_cents int default 0,
+  capacity int,
+  ticket_types jsonb,
+  check_in_required boolean default true,
+  tournament_id uuid, -- Will be added as foreign key after tournaments table is created
+  live_url text,
   status text default 'upcoming' check (status in ('draft', 'upcoming', 'ongoing', 'completed', 'cancelled')),
   created_by uuid references auth.users(id) on delete set null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 alter table public.events enable row level security;
 create policy "events readable" on public.events for select using (true);
 create policy "event creators can modify" on public.events for update using (auth.uid() = created_by);
+create policy "admins and moderators can modify events" on public.events for update using (
+  exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = auth.uid()
+    and ur.role in ('admin', 'moderator')
+  )
+);
 create policy "authenticated can create events" on public.events for insert with check (auth.role() = 'authenticated');
 create policy "admins and moderators can delete events" on public.events for delete using (
   exists (
@@ -86,13 +100,129 @@ alter table public.event_registrations enable row level security;
 create policy "registrations readable" on public.event_registrations for select using (true);
 create policy "users manage own registration" on public.event_registrations for all using (auth.uid() = user_id);
 
--- Helper view: event stats
+-- Event tickets (individual tickets with QR codes)
+create table if not exists public.event_tickets (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid references public.events(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  ticket_type text default 'regular',
+  price_cents int not null,
+  qr_code text unique not null,
+  status text default 'active' check (status in ('active', 'used', 'cancelled', 'transferred')),
+  purchased_at timestamptz default now(),
+  used_at timestamptz,
+  checked_in_at timestamptz,
+  transferred_to uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index idx_event_tickets_event_id on public.event_tickets(event_id);
+create index idx_event_tickets_user_id on public.event_tickets(user_id);
+create index idx_event_tickets_qr_code on public.event_tickets(qr_code);
+create index idx_event_tickets_status on public.event_tickets(status);
+
+alter table public.event_tickets enable row level security;
+create policy "tickets readable by owner and event organizers" on public.event_tickets 
+  for select using (
+    auth.uid() = user_id 
+    or auth.uid() = transferred_to
+    or exists (
+      select 1 from public.events e
+      where e.id = event_id 
+      and (e.created_by = auth.uid() or exists (
+        select 1 from public.user_roles ur
+        where ur.user_id = auth.uid()
+        and ur.role in ('admin', 'moderator')
+      ))
+    )
+  );
+create policy "users can create own tickets" on public.event_tickets 
+  for insert with check (auth.uid() = user_id);
+create policy "users can update own tickets" on public.event_tickets 
+  for update using (auth.uid() = user_id or auth.uid() = transferred_to);
+create policy "admins and moderators can manage all tickets" on public.event_tickets 
+  for all using (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  );
+
+-- Event check-ins
+create table if not exists public.event_checkins (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid references public.events(id) on delete cascade not null,
+  ticket_id uuid references public.event_tickets(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  checked_in_at timestamptz default now(),
+  checked_in_by uuid references auth.users(id) on delete set null,
+  location text,
+  notes text
+);
+
+create index idx_event_checkins_event_id on public.event_checkins(event_id);
+create index idx_event_checkins_ticket_id on public.event_checkins(ticket_id);
+create index idx_event_checkins_user_id on public.event_checkins(user_id);
+create index idx_event_checkins_checked_in_at on public.event_checkins(checked_in_at);
+
+alter table public.event_checkins enable row level security;
+create policy "checkins readable by event organizers and ticket owners" on public.event_checkins 
+  for select using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from public.events e
+      where e.id = event_id 
+      and (e.created_by = auth.uid() or exists (
+        select 1 from public.user_roles ur
+        where ur.user_id = auth.uid()
+        and ur.role in ('admin', 'moderator')
+      ))
+    )
+  );
+create policy "event organizers can create checkins" on public.event_checkins 
+  for insert with check (
+    exists (
+      select 1 from public.events e
+      where e.id = event_id 
+      and (e.created_by = auth.uid() or exists (
+        select 1 from public.user_roles ur
+        where ur.user_id = auth.uid()
+        and ur.role in ('admin', 'moderator')
+      ))
+    )
+  );
+
+-- Helper view: event stats (backward compatibility)
 create or replace view public.event_stats as
 select e.id as event_id,
-       count(r.user_id) as participants
+       count(distinct r.user_id) as participants,
+       count(distinct et.id) as tickets_sold
 from public.events e
 left join public.event_registrations r on r.event_id = e.id
+left join public.event_tickets et on et.event_id = e.id and et.status != 'cancelled'
 group by e.id;
+
+-- Event ticket stats view
+create or replace view public.event_ticket_stats as
+select 
+  e.id as event_id,
+  e.title as event_title,
+  e.capacity,
+  count(distinct et.id) as tickets_sold,
+  count(distinct case when et.status = 'active' then et.id end) as active_tickets,
+  count(distinct case when et.status = 'used' then et.id end) as used_tickets,
+  count(distinct ec.id) as check_ins_count,
+  coalesce(sum(case when et.status != 'cancelled' then et.price_cents else 0 end), 0) as total_revenue_cents,
+  case 
+    when e.capacity is not null then e.capacity - count(distinct et.id)
+    else null
+  end as available_seats
+from public.events e
+left join public.event_tickets et on et.event_id = e.id
+left join public.event_checkins ec on ec.ticket_id = et.id
+group by e.id, e.title, e.capacity;
 
 -- User roles and permissions
 create table if not exists public.user_roles (
@@ -505,6 +635,20 @@ create policy "admins and moderators can update tournaments" on public.tournamen
     and ur.role in ('admin', 'moderator')
   )
 );
+
+-- Add foreign key constraint for events.tournament_id (after tournaments table is created)
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'events_tournament_id_fkey'
+  ) then
+    alter table public.events 
+      add constraint events_tournament_id_fkey 
+      foreign key (tournament_id) 
+      references public.tournaments(id) 
+      on delete set null;
+  end if;
+end $$;
 
 -- Tournament participants
 create table if not exists public.tournament_participants (

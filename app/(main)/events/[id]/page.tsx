@@ -32,6 +32,9 @@ interface EventDetail {
   max_participants?: number;
   price_cents?: number;
   image_url?: string;
+  tournament_id?: string;
+  tournament_banner_url?: string;
+  is_using_tournament_banner?: boolean;
   live_url?: string;
   status: 'draft' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   event_stats?: {
@@ -262,6 +265,11 @@ export default function EventDetailPage() {
                   {statusInfo.label}
                 </div>
               </div>
+              {event.is_using_tournament_banner && (
+                <div className="absolute bottom-4 left-4 bg-blue-600/90 text-white px-3 py-1 rounded-full text-xs backdrop-blur-sm">
+                  📸 Menggunakan banner tournament
+                </div>
+              )}
             </div>
           </Card>
 

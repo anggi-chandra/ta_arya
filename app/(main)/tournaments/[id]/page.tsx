@@ -7,7 +7,6 @@ import Image from "next/image";
 import { TournamentBracket } from "@/components/ui/tournament-bracket";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 
 export default function TournamentDetailPage() {
   const params = useParams();
@@ -91,9 +90,9 @@ export default function TournamentDetailPage() {
   // State untuk tab aktif
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Cek status registrasi pengguna
+  // Check registration status using API
   useEffect(() => {
-    if (session) {
+    if (session?.user && tournamentId) {
       checkRegistrationStatus();
     }
   }, [session, tournamentId]);
@@ -170,32 +169,17 @@ export default function TournamentDetailPage() {
 
   // Fungsi untuk memeriksa status registrasi
   const checkRegistrationStatus = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user) return;
     
     try {
-      // Check if user's team is registered for this tournament
-      // First, get user's teams
-      const { data: userTeams } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('user_id', session.user.id);
+      const res = await fetch(`/api/tournaments/${tournamentId}/register/status`, {
+        credentials: 'include'
+      });
       
-      if (!userTeams || userTeams.length === 0) {
-        setIsRegistered(false);
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        setIsRegistered(data.isRegistered || false);
       }
-      
-      const teamIds = userTeams.map((ut: any) => ut.team_id);
-      
-      // Check if any of user's teams is registered
-      const { data: registration } = await supabase
-        .from('tournament_participants')
-        .select('tournament_id, team_id')
-        .eq('tournament_id', tournamentId)
-        .in('team_id', teamIds)
-        .maybeSingle();
-      
-      setIsRegistered(!!registration);
     } catch (error) {
       console.error('Error checking registration status:', error);
       setIsRegistered(false);
@@ -211,13 +195,64 @@ export default function TournamentDetailPage() {
 
     setIsLoading(true);
     try {
-      // For tournaments, registration is done via teams
-      // User needs to have a team first
-      alert('Untuk mendaftar turnamen, Anda perlu memiliki tim. Silakan buat tim terlebih dahulu.');
-      router.push('/teams');
-    } catch (error) {
+      // First, check if user has teams
+      const teamsRes = await fetch('/api/teams/my-teams', {
+        credentials: 'include'
+      });
+
+      if (!teamsRes.ok) {
+        throw new Error('Gagal memuat daftar tim');
+      }
+
+      const teamsData = await teamsRes.json();
+      const userTeams = teamsData.teams || [];
+
+      if (userTeams.length === 0) {
+        alert('Untuk mendaftar turnamen, Anda perlu memiliki tim. Silakan buat tim terlebih dahulu.');
+        router.push('/teams');
+        return;
+      }
+
+      // If user has multiple teams, let them choose (for now, use first team)
+      // TODO: Implement team selection UI
+      const selectedTeam = userTeams.find((t: any) => t.role === 'owner' || t.role === 'captain') || userTeams[0];
+
+      // Register team for tournament
+      const res = await fetch(`/api/tournaments/${tournamentId}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          team_id: selectedTeam.id
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal mendaftar tournament');
+      }
+
+      const data = await res.json();
+      setIsRegistered(true);
+      
+      // Refresh tournament data to update participant count
+      const refreshRes = await fetch(`/api/tournaments/${tournamentId}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.tournament?.registeredCount !== undefined) {
+          setRegisteredCount(refreshData.tournament.registeredCount);
+        }
+      }
+      
+      alert(data.message || 'Tim berhasil mendaftar untuk tournament!');
+    } catch (error: any) {
       console.error('Error registering for tournament:', error);
-      alert('Terjadi kesalahan saat mendaftar');
+      alert(error.message || 'Terjadi kesalahan saat mendaftar');
     } finally {
       setIsLoading(false);
     }
@@ -225,40 +260,42 @@ export default function TournamentDetailPage() {
 
   // Fungsi untuk membatalkan pendaftaran
   const unregisterFromTournament = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user) return;
     
     setIsLoading(true);
     try {
-      // Get user's teams
-      const { data: userTeams } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('user_id', session.user.id);
-      
-      if (!userTeams || userTeams.length === 0) {
-        alert('Anda tidak memiliki tim terdaftar');
-        return;
+      const res = await fetch(`/api/tournaments/${tournamentId}/register`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal membatalkan pendaftaran');
       }
-      
-      const teamIds = userTeams.map((ut: any) => ut.team_id);
-      
-      // Remove registration
-      const { error } = await supabase
-        .from('tournament_participants')
-        .delete()
-        .eq('tournament_id', tournamentId)
-        .in('team_id', teamIds);
-      
-      if (error) {
-        throw error;
-      }
-      
+
+      const data = await res.json();
       setIsRegistered(false);
-      setRegisteredCount((prev) => Math.max(0, prev - 1));
-      alert('Pendaftaran dibatalkan!');
+      
+      // Refresh tournament data to update participant count
+      const refreshRes = await fetch(`/api/tournaments/${tournamentId}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.tournament?.registeredCount !== undefined) {
+          setRegisteredCount(refreshData.tournament.registeredCount);
+        }
+      }
+      
+      alert(data.message || 'Pendaftaran berhasil dibatalkan!');
     } catch (error: any) {
       console.error('Error unregistering from tournament:', error);
-      alert(`Gagal membatalkan: ${error.message || 'Terjadi kesalahan'}`);
+      alert(error.message || 'Terjadi kesalahan saat membatalkan pendaftaran');
     } finally {
       setIsLoading(false);
     }

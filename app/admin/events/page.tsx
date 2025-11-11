@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,19 @@ type EventItem = {
   starts_at?: string;
   ends_at?: string;
   price_cents?: number;
+  capacity?: number;
+  ticket_types?: {
+    regular?: { price: number; available?: number };
+    vip?: { price: number; available?: number };
+    early_bird?: { price: number; available?: number };
+  } | null;
+  check_in_required?: boolean;
+  tournament_id?: string;
   event_stats?: { participants?: number } | null;
   live_url?: string;
   status?: 'draft' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  created_at?: string;
+  updated_at?: string;
 };
 
 async function fetchAdminEvents(page: number, limit: number, search: string, status: string) {
@@ -88,6 +98,9 @@ export default function AdminEventsPage() {
   const [newStartsAt, setNewStartsAt] = useState("");
   const [newEndsAt, setNewEndsAt] = useState("");
   const [newPriceCents, setNewPriceCents] = useState<number | "">("");
+  const [newCapacity, setNewCapacity] = useState<number | "">("");
+  const [newCheckInRequired, setNewCheckInRequired] = useState(true);
+  const [newTournamentId, setNewTournamentId] = useState("");
   const [newLiveUrl, setNewLiveUrl] = useState("");
   const [newStatus, setNewStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
 
@@ -102,10 +115,34 @@ export default function AdminEventsPage() {
   const [editStartsAt, setEditStartsAt] = useState("");
   const [editEndsAt, setEditEndsAt] = useState("");
   const [editPriceCents, setEditPriceCents] = useState<number | "">("");
+  const [editCapacity, setEditCapacity] = useState<number | "">("");
+  const [editCheckInRequired, setEditCheckInRequired] = useState(true);
+  const [editTournamentId, setEditTournamentId] = useState("");
   const [editLiveUrl, setEditLiveUrl] = useState("");
   const [editStatus, setEditStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
+  
+  // State for tournaments list (for dropdown)
+  const [tournaments, setTournaments] = useState<any[]>([]);
 
   const queryClient = useQueryClient();
+  
+  // Fetch tournaments list for dropdown
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const res = await fetch('/api/admin/tournaments?page=1&limit=100', {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTournaments(data.tournaments || []);
+        }
+      } catch (error) {
+        console.error('Error fetching tournaments:', error);
+      }
+    };
+    fetchTournaments();
+  }, []);
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin-events", page, limit, search, status],
     queryFn: () => fetchAdminEvents(page, limit, search, status),
@@ -147,6 +184,9 @@ export default function AdminEventsPage() {
         ends_at: newEndsAt || undefined,
         // Convert Rupiah to cents (multiply by 100)
         price_cents: newPriceCents ? Number(newPriceCents) * 100 : 0,
+        capacity: newCapacity ? Number(newCapacity) : undefined,
+        check_in_required: newCheckInRequired,
+        tournament_id: newTournamentId || undefined,
         live_url: newLiveUrl || undefined,
         status: newStatus,
       });
@@ -164,6 +204,9 @@ export default function AdminEventsPage() {
       setNewStartsAt("");
       setNewEndsAt("");
       setNewPriceCents("");
+      setNewCapacity("");
+      setNewCheckInRequired(true);
+      setNewTournamentId("");
       setNewLiveUrl("");
       setNewStatus("upcoming");
     },
@@ -187,6 +230,9 @@ export default function AdminEventsPage() {
         ends_at: editEndsAt || undefined,
         // Convert Rupiah to cents (multiply by 100)
         price_cents: editPriceCents ? Number(editPriceCents) * 100 : 0,
+        capacity: editCapacity ? Number(editCapacity) : undefined,
+        check_in_required: editCheckInRequired,
+        tournament_id: editTournamentId || undefined,
         live_url: editLiveUrl || undefined,
         status: editStatus,
       });
@@ -260,33 +306,59 @@ export default function AdminEventsPage() {
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input 
-              placeholder="Judul Event *" 
-              value={newTitle} 
-              onChange={(e) => setNewTitle(e.target.value)} 
-              required
-            />
-            <Input 
-              placeholder="Game (contoh: Mobile Legends, Valorant)" 
-              value={newGame} 
-              onChange={(e) => setNewGame(e.target.value)}
-            />
+            <div>
+              <Input 
+                placeholder="Judul Event *" 
+                value={newTitle} 
+                onChange={(e) => setNewTitle(e.target.value)} 
+                required
+              />
+              {newTournamentId && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Judul event bisa berbeda dengan tournament (contoh: "Tournament Name - Viewing Party")
+                </p>
+              )}
+            </div>
+            <div>
+              <Input 
+                placeholder="Game (contoh: Mobile Legends, Valorant)" 
+                value={newGame} 
+                onChange={(e) => setNewGame(e.target.value)}
+              />
+              {newTournamentId && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Game biasanya sama dengan tournament, tapi bisa diubah jika event untuk multiple games
+                </p>
+              )}
+            </div>
           </div>
           
-          <Input 
-            placeholder="Deskripsi Event" 
-            value={newDescription} 
-            onChange={(e) => setNewDescription(e.target.value)}
-            className="w-full"
-          />
+          <div>
+            <Input 
+              placeholder="Deskripsi Event" 
+              value={newDescription} 
+              onChange={(e) => setNewDescription(e.target.value)}
+              className="w-full"
+            />
+            {newTournamentId && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                💡 Deskripsi event bisa berbeda dengan tournament (fokus pada viewing party, venue, dll)
+              </p>
+            )}
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Gambar Thumbnail Event
+                Gambar Thumbnail Event <span className="text-gray-400 font-normal">(Opsional)</span>
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 Format: JPG, PNG, GIF, WebP (Maks. 5MB)
+                {newTournamentId && (
+                  <span className="block mt-1 text-blue-600 dark:text-blue-400">
+                    💡 Tip: Jika event terkait tournament, bisa menggunakan banner tournament atau upload thumbnail khusus event.
+                  </span>
+                )}
               </p>
               <div className="space-y-2">
                 <input
@@ -358,44 +430,163 @@ export default function AdminEventsPage() {
                 )}
               </div>
             </div>
-            <Input 
-              placeholder="Lokasi" 
-              value={newLocation} 
-              onChange={(e) => setNewLocation(e.target.value)}
-            />
+            <div>
+              <Input 
+                placeholder="Lokasi" 
+                value={newLocation} 
+                onChange={(e) => setNewLocation(e.target.value)}
+              />
+              {newTournamentId && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Lokasi event bisa berbeda dengan tournament (contoh: venue viewing party berbeda dengan venue tournament)
+                </p>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              type="datetime-local"
-              placeholder="Tanggal & Waktu Mulai *"
-              value={newStartsAt}
-              onChange={(e) => setNewStartsAt(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
-              required
-            />
-            <Input
-              type="datetime-local"
-              placeholder="Tanggal & Waktu Selesai"
-              value={newEndsAt}
-              onChange={(e) => setNewEndsAt(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
-            />
+            <div>
+              <Input
+                type="datetime-local"
+                placeholder="Tanggal & Waktu Mulai *"
+                value={newStartsAt}
+                onChange={(e) => setNewStartsAt(e.target.value)}
+                className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                required
+              />
+              {newTournamentId && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Tanggal event bisa berbeda dengan tournament (contoh: viewing party sebelum/sesudah final)
+                </p>
+              )}
+            </div>
+            <div>
+              <Input
+                type="datetime-local"
+                placeholder="Tanggal & Waktu Selesai"
+                value={newEndsAt}
+                onChange={(e) => setNewEndsAt(e.target.value)}
+                className="px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+              />
+              {newTournamentId && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  💡 Durasi event bisa berbeda dengan tournament
+                </p>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               type="number"
-              placeholder="Harga (dalam Rupiah)"
+              placeholder="Harga Tiket (dalam Rupiah)"
               value={newPriceCents}
               onChange={(e) => setNewPriceCents(e.target.value ? Number(e.target.value) : "")}
               min="0"
             />
+            <Input
+              type="number"
+              placeholder="Kapasitas (Jumlah Kursi/Penonton)"
+              value={newCapacity}
+              onChange={(e) => setNewCapacity(e.target.value ? Number(e.target.value) : "")}
+              min="0"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                Tournament Terkait (Opsional)
+              </label>
+              <select
+                value={newTournamentId}
+                onChange={(e) => {
+                  const tournamentId = e.target.value;
+                  setNewTournamentId(tournamentId);
+                  
+                  if (tournamentId) {
+                    const selectedTournament = tournaments.find(t => t.id === tournamentId);
+                    if (selectedTournament) {
+                      // Auto-fill fields from tournament (only if fields are empty)
+                      if (!newGame && selectedTournament.game) {
+                        setNewGame(selectedTournament.game);
+                      }
+                      if (!newLocation && selectedTournament.location) {
+                        setNewLocation(selectedTournament.location);
+                      }
+                      if (!newStartsAt && selectedTournament.starts_at) {
+                        // Convert ISO string to datetime-local format
+                        const startDate = new Date(selectedTournament.starts_at);
+                        const localDateTime = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000)
+                          .toISOString()
+                          .slice(0, 16);
+                        setNewStartsAt(localDateTime);
+                      }
+                      if (!newEndsAt && selectedTournament.ends_at) {
+                        // Convert ISO string to datetime-local format
+                        const endDate = new Date(selectedTournament.ends_at);
+                        const localDateTime = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+                          .toISOString()
+                          .slice(0, 16);
+                        setNewEndsAt(localDateTime);
+                      }
+                      if (!newTitle) {
+                        // Suggest title: "Tournament Title - Viewing Party"
+                        setNewTitle(`${selectedTournament.title} - Viewing Party`);
+                      }
+                      if (!newDescription && selectedTournament.description) {
+                        // Suggest description with tournament info
+                        setNewDescription(`Saksikan secara langsung ${selectedTournament.title}! ${selectedTournament.description || ''}`);
+                      }
+                      // Auto-fill tournament banner URL if no image is set
+                      if (!newImageUrl && !newImageFile && selectedTournament.banner_url) {
+                        setNewImageUrl(selectedTournament.banner_url);
+                      }
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+              >
+                <option value="">-- Pilih Tournament --</option>
+                {tournaments.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Link event ke tournament (untuk viewing party final, dll).
+              </p>
+              {newTournamentId && (
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">
+                    ✨ Data tournament telah diisi otomatis
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Field seperti Game, Lokasi, Tanggal, Judul, dan Deskripsi telah diisi dari tournament. 
+                    Anda bisa mengubahnya sesuai kebutuhan event (misalnya: tanggal viewing party bisa berbeda dengan tanggal tournament).
+                  </p>
+                </div>
+              )}
+            </div>
             <Input 
               placeholder="Link Live Stream (opsional)" 
               value={newLiveUrl} 
               onChange={(e) => setNewLiveUrl(e.target.value)}
             />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="newCheckInRequired"
+              checked={newCheckInRequired}
+              onChange={(e) => setNewCheckInRequired(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="newCheckInRequired" className="text-sm text-gray-700 dark:text-gray-300">
+              Diperlukan Check-in (penonton harus check-in di venue)
+            </label>
           </div>
           
           <div>
@@ -416,6 +607,11 @@ export default function AdminEventsPage() {
             </select>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Pilih status event. Draft tidak akan muncul di halaman publik.
+              {newTournamentId && (
+                <span className="block mt-1 text-blue-600 dark:text-blue-400">
+                  💡 Status event independen dari status tournament
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -471,7 +667,7 @@ export default function AdminEventsPage() {
                 <th className="py-2">Mulai</th>
                 <th className="py-2">Selesai</th>
                 <th className="py-2">Live URL</th>
-                <th className="py-2">Peserta</th>
+                <th className="py-2">Peserta/Kapasitas</th>
                 <th className="py-2">Aksi</th>
               </tr>
             </thead>
@@ -632,14 +828,52 @@ export default function AdminEventsPage() {
                     </td>
                     <td className="py-2">
                       {isEditing ? (
-                        <div className="space-y-2">
+                        <div className="space-y-2 min-w-[200px]">
                           <Input
                             type="number"
                             placeholder="Harga (Rupiah)"
                             value={editPriceCents}
                             onChange={(e) => setEditPriceCents(e.target.value ? Number(e.target.value) : "")}
                             min="0"
+                            className="text-xs"
                           />
+                          <Input
+                            type="number"
+                            placeholder="Kapasitas"
+                            value={editCapacity}
+                            onChange={(e) => setEditCapacity(e.target.value ? Number(e.target.value) : "")}
+                            min="0"
+                            className="text-xs"
+                          />
+                          <div>
+                            <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
+                              Tournament
+                            </label>
+                            <select
+                              value={editTournamentId}
+                              onChange={(e) => setEditTournamentId(e.target.value)}
+                              className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                            >
+                              <option value="">-- Tidak ada --</option>
+                              {tournaments.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`editCheckInRequired-${ev.id}`}
+                              checked={editCheckInRequired}
+                              onChange={(e) => setEditCheckInRequired(e.target.checked)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor={`editCheckInRequired-${ev.id}`} className="text-xs text-gray-700 dark:text-gray-300">
+                              Check-in
+                            </label>
+                          </div>
                           <div>
                             <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
                               Status
@@ -658,12 +892,18 @@ export default function AdminEventsPage() {
                           </div>
                         </div>
                       ) : (
-                        <div>
+                        <div className="text-xs">
                           <div>{ev.event_stats?.participants ?? 0} peserta</div>
+                          {ev.capacity && (
+                            <div className="text-gray-500">Kapasitas: {ev.capacity}</div>
+                          )}
                           {ev.price_cents !== undefined && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-gray-500">
                               {ev.price_cents > 0 ? `Rp ${(ev.price_cents / 100).toLocaleString('id-ID')}` : 'Gratis'}
                             </div>
+                          )}
+                          {ev.tournament_id && (
+                            <div className="text-blue-600 text-xs mt-1">Linked Tournament</div>
                           )}
                         </div>
                       )}
@@ -684,6 +924,9 @@ export default function AdminEventsPage() {
                             setEditEndsAt(ev.ends_at ? ev.ends_at.slice(0, 16) : "");
                             // Convert cents to Rupiah for display (divide by 100)
                             setEditPriceCents(ev.price_cents ? ev.price_cents / 100 : "");
+                            setEditCapacity(ev.capacity ?? "");
+                            setEditCheckInRequired(ev.check_in_required ?? true);
+                            setEditTournamentId(ev.tournament_id || "");
                             setEditLiveUrl(ev.live_url || "");
                             setEditStatus((ev.status as "draft" | "upcoming" | "ongoing" | "completed" | "cancelled") || "upcoming");
                           }}
