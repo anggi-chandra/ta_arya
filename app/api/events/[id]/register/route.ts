@@ -34,7 +34,7 @@ export async function POST(
     // Check if event exists
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, max_participants, starts_at')
+      .select('id, starts_at')
       .eq('id', eventId)
       .single()
 
@@ -60,18 +60,6 @@ export async function POST(
 
     if (existingRegistration) {
       return NextResponse.json({ error: 'Already registered' }, { status: 400 })
-    }
-
-    // Check if event is full
-    if (event.max_participants) {
-      const { data: registrations } = await supabase
-        .from('event_registrations')
-        .select('event_id')
-        .eq('event_id', eventId)
-
-      if (registrations && registrations.length >= event.max_participants) {
-        return NextResponse.json({ error: 'Event is full' }, { status: 400 })
-      }
     }
 
     // Register user

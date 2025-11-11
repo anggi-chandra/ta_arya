@@ -82,7 +82,6 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       location,
       starts_at,
       ends_at,
-      max_participants,
       price_cents,
       live_url,
       status
@@ -113,7 +112,6 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
     if (location !== undefined) updateData.location = location
     if (starts_at !== undefined) updateData.starts_at = starts_at
     if (ends_at !== undefined) updateData.ends_at = ends_at
-    if (max_participants !== undefined) updateData.max_participants = max_participants
     if (price_cents !== undefined) updateData.price_cents = price_cents
     if (live_url !== undefined) updateData.live_url = live_url
     if (eventStatus !== undefined) updateData.status = eventStatus
@@ -152,41 +150,39 @@ export const DELETE = withModeratorAuth(async (req: NextRequest, user: any, { pa
   const eventId = params.id
 
   try {
-    // Check if event has registrations
-    const { data: registrations, error: regError } = await supabase
-      .from('event_registrations')
+    // Check if event exists
+    const { data: event, error: eventError } = await supabase
+      .from('events')
       .select('id')
-      .eq('event_id', eventId)
-      .limit(1)
+      .eq('id', eventId)
+      .single()
 
-    if (regError) {
+    if (eventError || !event) {
       return NextResponse.json(
-        { error: 'Failed to check registrations' },
-        { status: 500 }
+        { error: 'Event not found' },
+        { status: 404 }
       )
     }
 
-    if (registrations && registrations.length > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete event with existing registrations' },
-        { status: 400 }
-      )
-    }
-
+    // Delete event - registrations will be automatically deleted via CASCADE
+    // This is handled by the database foreign key constraint: 
+    // event_registrations.event_id references events(id) on delete cascade
     const { error } = await supabase
       .from('events')
       .delete()
       .eq('id', eventId)
 
     if (error) {
+      console.error('Error deleting event:', error)
       return NextResponse.json(
         { error: `Failed to delete event: ${error.message}` },
-        { status: 400 }
+        { status: 500 }
       )
     }
 
     return NextResponse.json({
-      message: 'Event deleted successfully'
+      message: 'Event deleted successfully',
+      eventId: eventId
     })
   } catch (error) {
     console.error('Error deleting event:', error)

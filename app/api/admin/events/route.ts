@@ -150,7 +150,6 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       location,
       starts_at,
       ends_at,
-      max_participants,
       price_cents = 0,
       live_url,
       status = 'upcoming'
@@ -197,7 +196,6 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
         location,
         starts_at,
         ends_at,
-        max_participants,
         price_cents,
         live_url,
         status: eventStatus,

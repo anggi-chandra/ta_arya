@@ -16,7 +16,6 @@ type EventItem = {
   location?: string;
   starts_at?: string;
   ends_at?: string;
-  max_participants?: number;
   price_cents?: number;
   event_stats?: { participants?: number } | null;
   live_url?: string;
@@ -88,7 +87,6 @@ export default function AdminEventsPage() {
   const [newLocation, setNewLocation] = useState("");
   const [newStartsAt, setNewStartsAt] = useState("");
   const [newEndsAt, setNewEndsAt] = useState("");
-  const [newMaxParticipants, setNewMaxParticipants] = useState<number | "">("");
   const [newPriceCents, setNewPriceCents] = useState<number | "">("");
   const [newLiveUrl, setNewLiveUrl] = useState("");
   const [newStatus, setNewStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
@@ -103,7 +101,6 @@ export default function AdminEventsPage() {
   const [editLocation, setEditLocation] = useState("");
   const [editStartsAt, setEditStartsAt] = useState("");
   const [editEndsAt, setEditEndsAt] = useState("");
-  const [editMaxParticipants, setEditMaxParticipants] = useState<number | "">("");
   const [editPriceCents, setEditPriceCents] = useState<number | "">("");
   const [editLiveUrl, setEditLiveUrl] = useState("");
   const [editStatus, setEditStatus] = useState<"draft" | "upcoming" | "ongoing" | "completed" | "cancelled">("upcoming");
@@ -148,7 +145,6 @@ export default function AdminEventsPage() {
         location: newLocation || undefined,
         starts_at: newStartsAt || undefined,
         ends_at: newEndsAt || undefined,
-        max_participants: newMaxParticipants ? Number(newMaxParticipants) : undefined,
         // Convert Rupiah to cents (multiply by 100)
         price_cents: newPriceCents ? Number(newPriceCents) * 100 : 0,
         live_url: newLiveUrl || undefined,
@@ -167,7 +163,6 @@ export default function AdminEventsPage() {
       setNewLocation("");
       setNewStartsAt("");
       setNewEndsAt("");
-      setNewMaxParticipants("");
       setNewPriceCents("");
       setNewLiveUrl("");
       setNewStatus("upcoming");
@@ -190,7 +185,6 @@ export default function AdminEventsPage() {
         location: editLocation || undefined,
         starts_at: editStartsAt || undefined,
         ends_at: editEndsAt || undefined,
-        max_participants: editMaxParticipants ? Number(editMaxParticipants) : undefined,
         // Convert Rupiah to cents (multiply by 100)
         price_cents: editPriceCents ? Number(editPriceCents) * 100 : 0,
         live_url: editLiveUrl || undefined,
@@ -211,8 +205,20 @@ export default function AdminEventsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-events"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      // Show success message
+      alert("Event berhasil dihapus dari database.");
+    },
+    onError: (error: Error) => {
+      // Show error message
+      alert(`Gagal menghapus event: ${error.message}`);
     },
   });
+
+  const handleDeleteEvent = (eventId: string, eventTitle: string) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus event "${eventTitle}"?\n\nSemua data registrasi peserta untuk event ini juga akan ikut terhapus.`)) {
+      deleteMutation.mutate(eventId);
+    }
+  };
 
   const events = data?.events || [];
   const pagination = data?.pagination;
@@ -377,14 +383,7 @@ export default function AdminEventsPage() {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              type="number"
-              placeholder="Max Peserta"
-              value={newMaxParticipants}
-              onChange={(e) => setNewMaxParticipants(e.target.value ? Number(e.target.value) : "")}
-              min="1"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               type="number"
               placeholder="Harga (dalam Rupiah)"
@@ -636,13 +635,6 @@ export default function AdminEventsPage() {
                         <div className="space-y-2">
                           <Input
                             type="number"
-                            placeholder="Max Peserta"
-                            value={editMaxParticipants}
-                            onChange={(e) => setEditMaxParticipants(e.target.value ? Number(e.target.value) : "")}
-                            min="1"
-                          />
-                          <Input
-                            type="number"
                             placeholder="Harga (Rupiah)"
                             value={editPriceCents}
                             onChange={(e) => setEditPriceCents(e.target.value ? Number(e.target.value) : "")}
@@ -667,7 +659,7 @@ export default function AdminEventsPage() {
                         </div>
                       ) : (
                         <div>
-                          <div>{ev.event_stats?.participants ?? 0} / {ev.max_participants || "-"}</div>
+                          <div>{ev.event_stats?.participants ?? 0} peserta</div>
                           {ev.price_cents !== undefined && (
                             <div className="text-xs text-gray-500">
                               {ev.price_cents > 0 ? `Rp ${(ev.price_cents / 100).toLocaleString('id-ID')}` : 'Gratis'}
@@ -690,7 +682,6 @@ export default function AdminEventsPage() {
                             setEditLocation(ev.location || "");
                             setEditStartsAt(ev.starts_at ? ev.starts_at.slice(0, 16) : "");
                             setEditEndsAt(ev.ends_at ? ev.ends_at.slice(0, 16) : "");
-                            setEditMaxParticipants(ev.max_participants || "");
                             // Convert cents to Rupiah for display (divide by 100)
                             setEditPriceCents(ev.price_cents ? ev.price_cents / 100 : "");
                             setEditLiveUrl(ev.live_url || "");
@@ -721,10 +712,10 @@ export default function AdminEventsPage() {
                       )}
                       <Button
                         variant="destructive"
-                        onClick={() => deleteMutation.mutate(ev.id)}
+                        onClick={() => handleDeleteEvent(ev.id, ev.title)}
                         disabled={deleteMutation.isPending}
                       >
-                        Hapus
+                        {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
                       </Button>
                     </td>
                   </tr>

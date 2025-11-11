@@ -54,7 +54,6 @@ create table if not exists public.events (
   location text,
   starts_at timestamptz not null,
   ends_at timestamptz,
-  max_participants int,
   price_cents int default 0,
   status text default 'upcoming' check (status in ('draft', 'upcoming', 'ongoing', 'completed', 'cancelled')),
   created_by uuid references auth.users(id) on delete set null,
@@ -65,6 +64,14 @@ alter table public.events enable row level security;
 create policy "events readable" on public.events for select using (true);
 create policy "event creators can modify" on public.events for update using (auth.uid() = created_by);
 create policy "authenticated can create events" on public.events for insert with check (auth.role() = 'authenticated');
+create policy "admins and moderators can delete events" on public.events for delete using (
+  exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = auth.uid()
+    and ur.role in ('admin', 'moderator')
+  )
+);
+create policy "event creators can delete" on public.events for delete using (auth.uid() = created_by);
 
 -- Event registrations
 create table if not exists public.event_registrations (
@@ -484,8 +491,19 @@ create policy "tournaments readable" on public.tournaments for select using (tru
 create policy "authenticated can create tournaments" on public.tournaments for insert with check (auth.role() = 'authenticated');
 create policy "organizers can update own tournaments" on public.tournaments for update using (auth.uid() = organizer_id);
 create policy "organizers can delete own tournaments" on public.tournaments for delete using (auth.uid() = organizer_id);
-create policy "admins can manage all tournaments" on public.tournaments for all using (
-  exists (select 1 from public.user_roles ur where ur.user_id = auth.uid() and ur.role = 'admin')
+create policy "admins and moderators can delete tournaments" on public.tournaments for delete using (
+  exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = auth.uid()
+    and ur.role in ('admin', 'moderator')
+  )
+);
+create policy "admins and moderators can update tournaments" on public.tournaments for update using (
+  exists (
+    select 1 from public.user_roles ur
+    where ur.user_id = auth.uid()
+    and ur.role in ('admin', 'moderator')
+  )
 );
 
 -- Tournament participants

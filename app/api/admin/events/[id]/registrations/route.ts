@@ -97,10 +97,10 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any, { para
       )
     }
 
-    // Check if event exists and get max participants
+    // Check if event exists
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('max_participants')
+      .select('id')
       .eq('id', eventId)
       .single()
 
@@ -124,22 +124,6 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any, { para
         { error: 'User is already registered for this event' },
         { status: 400 }
       )
-    }
-
-    // Check max participants if set
-    if (event.max_participants) {
-      const { count } = await supabase
-        .from('event_registrations')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .eq('status', 'registered')
-
-      if (count && count >= event.max_participants) {
-        return NextResponse.json(
-          { error: 'Event is full' },
-          { status: 400 }
-        )
-      }
     }
 
     // Register user
