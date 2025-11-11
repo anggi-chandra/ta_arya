@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Users, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,9 @@ export function TeamCard({
         </div>
         
         <div className="flex justify-between items-center">
-          <Button variant="default">Lihat Detail</Button>
+          <Link href={`/teams/${id}`}>
+            <Button variant="default">Lihat Detail</Button>
+          </Link>
           {isRecruiting && (
             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
               Membuka Rekrutmen

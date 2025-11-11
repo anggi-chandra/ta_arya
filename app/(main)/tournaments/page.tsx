@@ -10,6 +10,17 @@ export default function TournamentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Helper function untuk format currency
+  const formatCurrency = (amount: number, currency?: string) => {
+    if (!currency || currency === 'IDR') {
+      return `${amount.toLocaleString('id-ID')} IDR`;
+    } else if (currency === 'USD') {
+      return `$${amount.toLocaleString('en-US')}`;
+    } else {
+      return `${amount.toLocaleString('id-ID')} ${currency}`;
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -134,14 +145,18 @@ export default function TournamentsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Entry Fee</p>
                   <p className="font-semibold text-green-600">
-                    {t.entry_fee && t.entry_fee > 0 ? `Rp ${t.entry_fee.toLocaleString('id-ID')}` : 'Gratis'}
+                    {t.entry_fee && t.entry_fee > 0 
+                      ? formatCurrency(t.entry_fee, t.currency)
+                      : 'Gratis'}
                   </p>
                 </div>
-                {t.prize_pool && t.prize_pool > 0 && (
+                {t.prize_pool !== undefined && t.prize_pool !== null && t.prize_pool > 0 && (
                   <div>
                     <p className="text-sm text-gray-600">Prize Pool</p>
                     <p className="font-semibold text-yellow-600">
-                      Rp {t.prize_pool.toLocaleString('id-ID')}
+                      {typeof t.prize_pool === 'number' 
+                        ? formatCurrency(t.prize_pool, t.currency)
+                        : t.prize_pool}
                     </p>
                   </div>
                 )}

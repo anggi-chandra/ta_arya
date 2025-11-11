@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   full_name text,
   avatar_url text,
   bio text,
+  can_create_team boolean default true,
   created_at timestamptz default now()
 );
 
@@ -12,6 +13,23 @@ alter table public.profiles enable row level security;
 create policy "profiles are readable by everyone" on public.profiles for select using (true);
 create policy "users can update own profile" on public.profiles for update using (auth.uid() = id);
 create policy "insert own profile" on public.profiles for insert with check (auth.uid() = id);
+-- Allow admins and moderators to update team creation permission
+create policy "admins can update team permission" on public.profiles 
+  for update 
+  using (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  );
 
 -- Teams
 create table if not exists public.teams (
@@ -28,7 +46,73 @@ create table if not exists public.teams (
 alter table public.teams enable row level security;
 create policy "teams readable" on public.teams for select using (true);
 create policy "team owners can modify" on public.teams for update using (auth.uid() = owner_id);
-create policy "authenticated can create team" on public.teams for insert with check (auth.role() = 'authenticated');
+-- Allow admins and moderators to always create teams (when approving requests)
+create policy "admins and moderators can always create teams" on public.teams 
+  for insert 
+  with check (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  );
+-- Note: Regular users can no longer create teams directly
+-- They must submit a request through team_requests table
+-- The old policy for regular users is removed to enforce this workflow
+
+-- Team requests (for user team creation requests)
+create table if not exists public.team_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  game text not null,
+  logo_url text,
+  description text,
+  recruiting boolean default false,
+  status text default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  requested_at timestamptz default now(),
+  reviewed_at timestamptz,
+  reviewed_by uuid references auth.users(id) on delete set null,
+  rejection_reason text,
+  created_at timestamptz default now()
+);
+
+alter table public.team_requests enable row level security;
+create policy "users can view own requests" on public.team_requests
+  for select
+  using (auth.uid() = user_id);
+create policy "users can create requests" on public.team_requests
+  for insert
+  with check (auth.uid() = user_id);
+create policy "admins can view all requests" on public.team_requests
+  for select
+  using (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  );
+create policy "admins can update requests" on public.team_requests
+  for update
+  using (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+      and ur.role in ('admin', 'moderator')
+    )
+  );
+
+create index if not exists team_requests_user_id_idx on public.team_requests(user_id);
+create index if not exists team_requests_status_idx on public.team_requests(status);
+create index if not exists team_requests_requested_at_idx on public.team_requests(requested_at desc);
 
 -- Team members
 create table if not exists public.team_members (

@@ -3,12 +3,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 
 type UserRole = { id: string; role: string };
-type Profile = { id: string; full_name?: string; username?: string; user_roles?: UserRole[] };
+type Profile = { 
+  id: string; 
+  full_name?: string; 
+  username?: string; 
+  user_roles?: UserRole[];
+  can_create_team?: boolean;
+};
 
 async function fetchUsers(search: string) {
   const params = new URLSearchParams();
@@ -38,6 +44,97 @@ async function deleteUser(id: string) {
     throw new Error(errorData.error || "Gagal menghapus pengguna");
   }
   return res.json();
+}
+
+async function updateTeamPermission(userId: string, canCreateTeam: boolean) {
+  const res = await fetch(`/api/admin/users/${userId}/team-permission`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: 'include',
+    body: JSON.stringify({ can_create_team: canCreateTeam })
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Gagal memperbarui izin");
+  }
+  return res.json();
+}
+
+function UserRow({ 
+  user, 
+  onDelete, 
+  isDeleting 
+}: { 
+  user: Profile; 
+  onDelete: () => void; 
+  isDeleting: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  const canCreateTeam = user.can_create_team !== false; // Default true if null
+  
+  const updatePermissionMutation = useMutation({
+    mutationFn: (canCreateTeam: boolean) => updateTeamPermission(user.id, canCreateTeam),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setIsUpdating(false);
+    },
+    onError: (error: any) => {
+      alert(error.message || "Gagal memperbarui izin");
+      setIsUpdating(false);
+    }
+  });
+
+  const handleTogglePermission = () => {
+    setIsUpdating(true);
+    updatePermissionMutation.mutate(!canCreateTeam);
+  };
+
+  return (
+    <tr className="border-b border-gray-100 dark:border-gray-800">
+      <td className="py-2">{user.full_name || "-"}</td>
+      <td className="py-2">{user.username || user.id.substring(0, 8) || "-"}</td>
+      <td className="py-2">
+        {user.user_roles && user.user_roles.length > 0 
+          ? user.user_roles.map((r: UserRole) => r.role).join(", ")
+          : "user"
+        }
+      </td>
+      <td className="py-2">
+        <button
+          onClick={handleTogglePermission}
+          disabled={isUpdating}
+          className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+            canCreateTeam
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
+              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {canCreateTeam ? (
+            <>
+              <CheckCircle className="h-4 w-4" />
+              Diizinkan
+            </>
+          ) : (
+            <>
+              <XCircle className="h-4 w-4" />
+              Tidak Diizinkan
+            </>
+          )}
+        </button>
+      </td>
+      <td className="py-2">
+        <Button
+          variant="destructive"
+          onClick={onDelete}
+          disabled={isDeleting}
+        >
+          <Trash2 className="h-4 w-4 mr-2" /> Hapus
+        </Button>
+      </td>
+    </tr>
+  );
 }
 
 export default function AdminUsersPage() {
@@ -103,30 +200,18 @@ export default function AdminUsersPage() {
                 <th className="py-2">Nama</th>
                 <th className="py-2">Username</th>
                 <th className="py-2">Role</th>
+                <th className="py-2">Izin Buat Tim</th>
                 <th className="py-2">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="py-2">{u.full_name || "-"}</td>
-                  <td className="py-2">{u.username || u.id.substring(0, 8) || "-"}</td>
-                  <td className="py-2">
-                    {u.user_roles && u.user_roles.length > 0 
-                      ? u.user_roles.map((r: UserRole) => r.role).join(", ")
-                      : "user"
-                    }
-                  </td>
-                  <td className="py-2">
-                    <Button
-                      variant="destructive"
-                      onClick={() => mutation.mutate(u.id)}
-                      disabled={mutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Hapus
-                    </Button>
-                  </td>
-                </tr>
+                <UserRow 
+                  key={u.id} 
+                  user={u} 
+                  onDelete={() => mutation.mutate(u.id)} 
+                  isDeleting={mutation.isPending}
+                />
               ))}
             </tbody>
           </table>

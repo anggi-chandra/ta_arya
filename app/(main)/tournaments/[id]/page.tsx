@@ -90,6 +90,17 @@ export default function TournamentDetailPage() {
   // State untuk tab aktif
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Helper function untuk format currency
+  const formatCurrency = (amount: number, currency?: string) => {
+    if (!currency || currency === 'IDR') {
+      return `${amount.toLocaleString('id-ID')} IDR`;
+    } else if (currency === 'USD') {
+      return `$${amount.toLocaleString('en-US')}`;
+    } else {
+      return `${amount.toLocaleString('id-ID')} ${currency}`;
+    }
+  };
+
   // Check registration status using API
   useEffect(() => {
     if (session?.user && tournamentId) {
@@ -479,7 +490,7 @@ export default function TournamentDetailPage() {
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Entry Fee:</p>
                     <p className="font-medium">
                       {tournament.entry_fee && tournament.entry_fee > 0 
-                        ? `${tournament.currency || 'IDR'} ${tournament.entry_fee.toLocaleString('id-ID')}` 
+                        ? formatCurrency(tournament.entry_fee, tournament.currency)
                         : 'Gratis'}
                     </p>
                   </div>
@@ -487,7 +498,9 @@ export default function TournamentDetailPage() {
                     <div>
                       <p className="text-gray-600 dark:text-gray-400 mb-1">Prize Pool:</p>
                       <p className="font-medium text-yellow-600">
-                        {tournament.currency || 'IDR'} {typeof tournament.prize_pool === 'number' ? tournament.prize_pool.toLocaleString('id-ID') : tournament.prize_pool}
+                        {typeof tournament.prize_pool === 'number' 
+                          ? formatCurrency(tournament.prize_pool, tournament.currency)
+                          : tournament.prize_pool}
                       </p>
                     </div>
                   )}
@@ -557,7 +570,7 @@ export default function TournamentDetailPage() {
                   <p className="text-gray-600 dark:text-gray-400 mb-1">Entry Fee:</p>
                   <p className="font-medium">
                     {tournament.entry_fee && tournament.entry_fee > 0 
-                      ? `${tournament.currency || 'IDR'} ${tournament.entry_fee.toLocaleString('id-ID')}` 
+                      ? formatCurrency(tournament.entry_fee, tournament.currency)
                       : 'Gratis'}
                   </p>
                 </div>
@@ -565,7 +578,9 @@ export default function TournamentDetailPage() {
                   <div className="mb-4">
                     <p className="text-gray-600 dark:text-gray-400 mb-1">Prize Pool:</p>
                     <p className="font-medium text-yellow-600">
-                      {tournament.currency || 'IDR'} {typeof tournament.prize_pool === 'number' ? tournament.prize_pool.toLocaleString('id-ID') : tournament.prize_pool}
+                      {typeof tournament.prize_pool === 'number' 
+                        ? formatCurrency(tournament.prize_pool, tournament.currency)
+                        : tournament.prize_pool}
                     </p>
                   </div>
                 )}

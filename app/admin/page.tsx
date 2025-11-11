@@ -82,10 +82,25 @@ async function fetchStats() {
       console.error('Error fetching tournaments:', tournamentsRes.status, errorText);
     }
     
+    // Fetch teams count
+    const teamsRes = await fetch('/api/admin/teams?page=1&limit=1', {
+      credentials: 'include'
+    });
+    
+    let teamsData = { pagination: { total: 0 } };
+    if (teamsRes.ok) {
+      teamsData = await teamsRes.json();
+      console.log('Teams API response:', teamsData);
+    } else {
+      const errorText = await teamsRes.text();
+      console.error('Error fetching teams:', teamsRes.status, errorText);
+    }
+    
     const stats = {
       events: eventsData.pagination?.total || 0,
       users: usersData.pagination?.total || 0,
       tournaments: tournamentsData.pagination?.total || 0,
+      teams: teamsData.pagination?.total || 0,
       reports: 0, // TODO: Implement reports API
     };
     
@@ -98,6 +113,7 @@ async function fetchStats() {
       events: 0,
       users: 0,
       tournaments: 0,
+      teams: 0,
       reports: 0,
     };
   }
@@ -174,65 +190,81 @@ function AdminDashboardContent() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 rounded-md bg-blue-100 dark:bg-blue-900">
-                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+          <Card className="p-5 h-full hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex-shrink-0">
+                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   Total Pengguna
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
                   {isLoading ? '...' : stats?.users || 0}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 rounded-md bg-green-100 dark:bg-green-900">
-                <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <Card className="p-5 h-full hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/50 flex-shrink-0">
+                <Calendar className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   Total Event
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
                   {isLoading ? '...' : stats?.events || 0}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 rounded-md bg-purple-100 dark:bg-purple-900">
-                <Trophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <Card className="p-5 h-full hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex-shrink-0">
+                <Trophy className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   Total Turnamen
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
                   {isLoading ? '...' : stats?.tournaments || 0}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 rounded-md bg-red-100 dark:bg-red-900">
-                <ShieldCheck className="h-5 w-5 text-red-600 dark:text-red-400" />
+          <Card className="p-5 h-full hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/50 flex-shrink-0">
+                <Gamepad2 className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                  Total Tim
+                </p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {isLoading ? '...' : stats?.teams || 0}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 h-full hover:shadow-lg transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/50 flex-shrink-0">
+                <ShieldCheck className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                   Laporan Moderasi
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
                   {isLoading ? '...' : stats?.reports || 0}
                 </p>
               </div>
