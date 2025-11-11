@@ -31,7 +31,7 @@ export async function GET(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Get participant count
+    // Get participant count from registrations
     const { data: registrations, error: regError } = await supabase
       .from('event_registrations')
       .select('event_id')
@@ -42,6 +42,19 @@ export async function GET(
     }
 
     const participantCount = registrations?.length || 0
+
+    // Get tickets count and sold tickets
+    const { count: ticketsCount, error: ticketsError } = await supabase
+      .from('event_tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .neq('status', 'cancelled')
+
+    if (ticketsError) {
+      console.error('Error fetching tickets count:', ticketsError)
+    }
+
+    const ticketsSold = ticketsCount || 0
 
     // Fetch tournament banner if event has tournament_id and no image_url
     let tournamentBannerUrl: string | null = null
@@ -97,7 +110,8 @@ export async function GET(
       tournament_banner_url: tournamentBannerUrl, // Keep original tournament banner for reference
       is_using_tournament_banner: isUsingTournamentBanner, // Flag to indicate if using tournament banner
       event_stats: {
-        participants: participantCount
+        participants: participantCount,
+        tickets_sold: ticketsSold
       },
       status
     }

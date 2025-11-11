@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -50,13 +51,52 @@ export default function Home() {
 
     fetchEvents();
   }, []);
+
+  // Handle video loading
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch((err) => {
+        console.error('Error playing video:', err);
+      });
+    }
+  }, []);
   return (
     <div className="flex flex-col min-h-screen w-full bg-zinc-50 dark:bg-black">
       <Navbar />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-20 relative">
+      <section className="relative overflow-hidden text-white min-h-[500px] flex items-center">
+        {/* Video Background */}
+        <div className="absolute inset-0 w-full h-full z-0">
+          <video
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ 
+              objectFit: 'cover',
+              width: '100%',
+              height: '100%',
+              minHeight: '100%',
+              pointerEvents: 'none'
+            }}
+            onError={(e) => {
+              console.error('Video error:', e);
+            }}
+          >
+            <source src="/hero-video-2.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          {/* Fallback gradient jika video gagal dimuat */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 video-fallback hidden"></div>
+          {/* Overlay untuk meningkatkan kontras teks */}
+          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"></div>
+        </div>
+        <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-20 relative z-10 w-full">
           <div className="max-w-3xl">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-blue-200 text-xs mb-4">
               🏆 Platform Manajemen Esports Terdepan

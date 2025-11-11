@@ -30,6 +30,13 @@ interface EventDetail {
   starts_at: string;
   ends_at?: string;
   max_participants?: number;
+  capacity?: number;
+  ticket_types?: {
+    regular?: { price: number; available?: number };
+    vip?: { price: number; available?: number };
+    early_bird?: { price: number; available?: number };
+  } | null;
+  check_in_required?: boolean;
   price_cents?: number;
   image_url?: string;
   tournament_id?: string;
@@ -39,6 +46,7 @@ interface EventDetail {
   status: 'draft' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   event_stats?: {
     participants: number;
+    tickets_sold?: number;
   };
   created_at: string;
   created_by?: string;
@@ -50,8 +58,6 @@ export default function EventDetailPage() {
   const { data: session } = useSession();
   const eventId = params.id as string;
 
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
 
   // Fetch event data
   const { data: eventData, isLoading, error, refetch } = useQuery({
@@ -73,59 +79,22 @@ export default function EventDetailPage() {
     retryDelay: 1000
   });
 
-  // Check if user is registered
-  useEffect(() => {
-    if (session?.user && eventId) {
-      checkRegistrationStatus();
-    }
-  }, [session, eventId]);
-
-  const checkRegistrationStatus = async () => {
-    if (!session?.user) return;
-
-    try {
-      const res = await fetch(`/api/events/${eventId}/register/status`, {
+  // Check if user has tickets for this event
+  const { data: userTickets } = useQuery({
+    queryKey: ['event-tickets', eventId],
+    queryFn: async () => {
+      if (!session?.user) return null;
+      const res = await fetch(`/api/events/${eventId}/tickets/my-tickets`, {
         credentials: 'include'
       });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setIsRegistered(data.isRegistered || false);
-      }
-    } catch (error) {
-      console.error('Error checking registration status:', error);
-    }
-  };
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.tickets || [];
+    },
+    enabled: !!session?.user && !!eventId
+  });
 
-  const handleRegister = async () => {
-    if (!session) {
-      router.push(`/login?redirect=/events/${eventId}`);
-      return;
-    }
-
-    setIsRegistering(true);
-    try {
-      const res = await fetch(`/api/events/${eventId}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to register');
-      }
-
-      setIsRegistered(true);
-      refetch(); // Refresh event data to update participant count
-    } catch (error: any) {
-      alert(error.message || 'Gagal mendaftar event');
-    } finally {
-      setIsRegistering(false);
-    }
-  };
+  const hasTickets = userTickets && userTickets.length > 0;
 
   if (isLoading) {
     return (
@@ -164,8 +133,12 @@ export default function EventDetailPage() {
   const startsAt = event.starts_at ? new Date(event.starts_at) : null;
   const endsAt = event.ends_at ? new Date(event.ends_at) : null;
   const participantCount = event.event_stats?.participants || 0;
+  const ticketsSold = event.event_stats?.tickets_sold || 0;
   const maxParticipants = event.max_participants || 0;
-  const isFull = maxParticipants > 0 && participantCount >= maxParticipants;
+  const capacity = event.capacity || 0;
+  // Check if event is full based on capacity (preferred) or max_participants (legacy)
+  const isFull = (capacity > 0 && ticketsSold >= capacity) || 
+                 (maxParticipants > 0 && participantCount >= maxParticipants);
   const price = event.price_cents ? event.price_cents / 100 : 0;
 
   // Format dates
@@ -390,23 +363,28 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {isRegistered ? (
+            {hasTickets ? (
               <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <div className="flex items-center gap-2 text-green-800 dark:text-green-300">
+                <div className="flex items-center gap-2 text-green-800 dark:text-green-300 mb-2">
                   <CheckCircle className="h-4 w-4" />
-                  <p className="text-sm font-medium">Anda sudah terdaftar</p>
+                  <p className="text-sm font-medium">Anda memiliki {userTickets?.length || 0} tiket</p>
                 </div>
+                <Link href={`/events/${eventId}/tickets`}>
+                  <Button variant="outline" className="w-full">
+                    Lihat Tiket Saya
+                  </Button>
+                </Link>
               </div>
             ) : (
               <>
                 {event.status === 'upcoming' && !isFull && (
-                  <Button 
-                    onClick={handleRegister}
-                    disabled={isRegistering}
-                    className="w-full mb-4"
-                  >
-                    {isRegistering ? 'Mendaftar...' : 'Daftar Event'}
-                  </Button>
+                  <Link href={`/events/${eventId}/tickets`}>
+                    <Button 
+                      className="w-full mb-4"
+                    >
+                      Beli Tiket
+                    </Button>
+                  </Link>
                 )}
               </>
             )}

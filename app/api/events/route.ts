@@ -21,19 +21,12 @@ export async function GET(request: NextRequest) {
       .from('events')
       .select('*', { count: 'exact' })
     
-    // Filter by status (only if status parameter is provided)
-    // If no status, show all events
-    const now = new Date().toISOString()
-    if (status) {
-      if (status === 'upcoming') {
-        query = query.gt('starts_at', now)
-      } else if (status === 'ongoing') {
-        query = query.lte('starts_at', now).gte('ends_at', now)
-      } else if (status === 'completed') {
-        query = query.lt('ends_at', now)
-      }
-    }
-    // No else clause - if no status, show all events
+    // Filter out draft events from public view (they should not be visible)
+    query = query.neq('status', 'draft')
+    
+    // Don't filter by status here - let frontend handle status categorization
+    // Frontend will use the status field from database as priority
+    // This ensures events with status='ongoing' will appear in the ongoing section
     
     // Search functionality
     if (search) {

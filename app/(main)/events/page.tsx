@@ -75,48 +75,88 @@ export default function EventsPage() {
           console.warn('Error fetching tournaments (non-critical):', tournamentsError);
         }
         
-        // Determine status based on dates
+        // Determine status based on database status field or dates
         const now = new Date();
         
         // Combine and normalize data
         const combinedEvents = [
-          ...events.map((e: any) => {
-            const startsAt = e.starts_at ? new Date(e.starts_at) : null;
-            const endsAt = e.ends_at ? new Date(e.ends_at) : null;
-            
-            // Determine status based on dates
-            let status: EventStatus = 'upcoming';
-            if (startsAt && endsAt) {
-              if (now >= startsAt && now <= endsAt) {
-                status = 'ongoing';
-              } else if (now > endsAt) {
-                status = 'completed';
+          ...events
+            .filter((e: any) => {
+              // Filter out draft events from public view
+              // Only show draft events if explicitly needed (for admin preview)
+              return e.status !== 'draft';
+            })
+            .map((e: any) => {
+              const startsAt = e.starts_at ? new Date(e.starts_at) : null;
+              const endsAt = e.ends_at ? new Date(e.ends_at) : null;
+              
+              // Use database status as priority, fallback to date-based calculation
+              let status: EventStatus = 'upcoming';
+              
+              // If database has status field, use it (map database status to EventStatus)
+              if (e.status) {
+                const dbStatus = e.status.toLowerCase();
+                if (dbStatus === 'ongoing') {
+                  status = 'ongoing';
+                } else if (dbStatus === 'completed') {
+                  status = 'completed';
+                } else if (dbStatus === 'cancelled') {
+                  // Cancelled events can be treated as completed for display
+                  status = 'completed';
+                } else if (dbStatus === 'upcoming') {
+                  status = 'upcoming';
+                } else {
+                  // For any other status, determine based on dates
+                  if (startsAt && endsAt) {
+                    if (now >= startsAt && now <= endsAt) {
+                      status = 'ongoing';
+                    } else if (now > endsAt) {
+                      status = 'completed';
+                    } else {
+                      status = 'upcoming';
+                    }
+                  } else if (startsAt) {
+                    if (now >= startsAt) {
+                      status = 'completed';
+                    } else {
+                      status = 'upcoming';
+                    }
+                  }
+                }
               } else {
-                status = 'upcoming';
+                // No status in database, determine based on dates
+                if (startsAt && endsAt) {
+                  if (now >= startsAt && now <= endsAt) {
+                    status = 'ongoing';
+                  } else if (now > endsAt) {
+                    status = 'completed';
+                  } else {
+                    status = 'upcoming';
+                  }
+                } else if (startsAt) {
+                  if (now >= startsAt) {
+                    status = 'completed';
+                  } else {
+                    status = 'upcoming';
+                  }
+                }
               }
-            } else if (startsAt) {
-              if (now >= startsAt) {
-                status = 'completed';
-              } else {
-                status = 'upcoming';
-              }
-            }
-            
-            return {
-              ...e,
-              type: 'event' as EventType,
-              status,
-              game: e.game || 'General',
-              location: e.location || 'TBA',
-              date: startsAt ? startsAt.toISOString().split('T')[0] : '',
-              time: startsAt ? startsAt.toTimeString().slice(0, 5) : '',
-              prizePool: e.price_cents ? `Rp ${(e.price_cents / 100).toLocaleString('id-ID')}` : undefined,
-              maxParticipants: e.max_participants,
-              participants: e.event_stats?.participants || 0,
-              image: e.image_url || '/images/hero-esports.svg',
-              liveUrl: e.live_url
-            };
-          }),
+              
+              return {
+                ...e,
+                type: 'event' as EventType,
+                status,
+                game: e.game || 'General',
+                location: e.location || 'TBA',
+                date: startsAt ? startsAt.toISOString().split('T')[0] : '',
+                time: startsAt ? startsAt.toTimeString().slice(0, 5) : '',
+                prizePool: e.price_cents ? `Rp ${(e.price_cents / 100).toLocaleString('id-ID')}` : undefined,
+                maxParticipants: e.max_participants,
+                participants: e.event_stats?.participants || 0,
+                image: e.image_url || '/images/hero-esports.svg',
+                liveUrl: e.live_url
+              };
+            }),
           ...tournaments.map((t: any) => {
             const startsAt = t.starts_at ? new Date(t.starts_at) : null;
             const endsAt = t.ends_at ? new Date(t.ends_at) : null;
@@ -155,6 +195,18 @@ export default function EventsPage() {
           ongoing: combinedEvents.filter(e => e.status === 'ongoing').length,
           completed: combinedEvents.filter(e => e.status === 'completed').length
         });
+        
+        // Log events with status='ongoing' from database
+        const ongoingFromDB = events.filter((e: any) => e.status === 'ongoing');
+        if (ongoingFromDB.length > 0) {
+          console.log('Events with status=ongoing from database:', ongoingFromDB.map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            status: e.status,
+            starts_at: e.starts_at,
+            ends_at: e.ends_at
+          })));
+        }
         
         return combinedEvents;
       } catch (err: any) {
@@ -369,8 +421,8 @@ export default function EventsPage() {
                         </Button>
                       </Link>
                     )}
-                    <Link href={`/register?for=event&id=${e.id}`}>
-                      <Button variant="outline">Daftar Event</Button>
+                    <Link href={`/events/${e.id}/tickets`}>
+                      <Button variant="outline">Beli Tiket</Button>
                     </Link>
                     <Link href={`/events/${e.id}`}>
                       <Button variant="ghost">Lihat Detail</Button>
@@ -423,8 +475,8 @@ export default function EventsPage() {
                     <div className="flex items-center"><MapPin className="h-4 w-4 mr-2" />{e.location}</div>
                   </div>
                   <div className="flex gap-3 mt-auto">
-                    <Link href={`/register?for=event&id=${e.id}`}>
-                      <Button size="sm" className="">Daftar</Button>
+                    <Link href={`/events/${e.id}/tickets`}>
+                      <Button size="sm" className="">Beli Tiket</Button>
                     </Link>
                     <Link href={`/events/${e.id}`}>
                       <Button size="sm" variant="outline">Detail</Button>
