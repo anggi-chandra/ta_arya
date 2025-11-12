@@ -50,12 +50,8 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       content,
       excerpt,
       type,
-      category,
       status,
-      featured_image_url,
-      tags,
-      meta_title,
-      meta_description,
+      featured_image,
       published_at
     } = body
 
@@ -113,11 +109,10 @@ export const PUT = withModeratorAuth(async (req: NextRequest, user: any, { param
       }
       updateData.type = type
     }
-    if (category !== undefined) updateData.category = category
-    if (featured_image_url !== undefined) updateData.featured_image_url = featured_image_url
-    if (tags !== undefined) updateData.tags = tags
-    if (meta_title !== undefined) updateData.meta_title = meta_title
-    if (meta_description !== undefined) updateData.meta_description = meta_description
+    // Use featured_image instead of featured_image_url (matches schema)
+    if (featured_image !== undefined) {
+      updateData.featured_image = featured_image || null
+    }
 
     // Handle status change
     if (status) {

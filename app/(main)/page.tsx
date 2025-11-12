@@ -36,52 +36,52 @@ export default function HomePage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="md:w-1/2 mb-10 md:mb-0 z-10">
-              <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6 shadow-lg border border-white/20">
+            <div className="md:w-1/2 mb-10 md:mb-0 z-10 animate-fade-in-up">
+              <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6 shadow-lg border border-white/20 animate-fade-in-down">
                 🏆 Platform Esports #1 di Indonesia
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-2xl">
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-2xl animate-fade-in-up stagger-1">
                 <span className="text-white">Wujudkan Impian</span>
-                <span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent drop-shadow-lg"> Esports</span>
+                <span className="text-gradient-primary drop-shadow-lg"> Esports</span>
                 <span className="text-white"> Anda</span>
               </h1>
-              <p className="text-xl mb-8 text-white/95 leading-relaxed drop-shadow-lg">
+              <p className="text-xl mb-8 text-white/95 leading-relaxed drop-shadow-lg animate-fade-in-up stagger-2">
                 Bergabunglah dengan komunitas esports terbesar di Indonesia. Ikuti turnamen, bentuk tim impian, dan raih prestasi tertinggi dalam dunia gaming kompetitif.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 animate-fade-in-up stagger-3">
                 <Link href="/events">
-                  <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 text-lg font-semibold shadow-lg">
+                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105">
                     🎮 Jelajahi Event
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-blue-900 px-8 py-3 text-lg font-semibold">
+                  <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-3 text-lg font-semibold hover:scale-105">
                     Daftar Sekarang
                   </Button>
                 </Link>
               </div>
               
               {/* Stats */}
-              <div className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/20">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-400">50K+</div>
+              <div className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/20 animate-fade-in-up stagger-4">
+                <div className="text-center hover:scale-110 transition-transform duration-300">
+                  <div className="text-3xl font-bold text-primary-start">50K+</div>
                   <div className="text-sm text-gray-300">Gamers Aktif</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-400">200+</div>
+                <div className="text-center hover:scale-110 transition-transform duration-300">
+                  <div className="text-3xl font-bold text-primary-end">200+</div>
                   <div className="text-sm text-gray-300">Event Selesai</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">1M+</div>
+                <div className="text-center hover:scale-110 transition-transform duration-300">
+                  <div className="text-3xl font-bold text-gradient-primary bg-clip-text text-transparent">1M+</div>
                   <div className="text-sm text-gray-300">Total Prize Pool</div>
                 </div>
               </div>
             </div>
             
-            <div className="md:w-1/2 relative">
-              <div className="relative h-96 md:h-[500px] w-full">
+            <div className="md:w-1/2 relative animate-fade-in-right">
+              <div className="relative h-96 md:h-[500px] w-full animate-float">
                 {/* Glowing effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-3xl blur-3xl"></div>
+                <div className="absolute inset-0 bg-gradient-primary opacity-30 rounded-3xl blur-3xl animate-pulse-slow"></div>
                 <Image
                   src="/images/hero-esports.svg"
                   alt="Esports Tournament"
@@ -97,21 +97,21 @@ export default function HomePage() {
       {/* Highlight Event Terbaru */}
       <section className="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 text-sm font-medium mb-4">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary-start dark:text-primary-start text-sm font-medium mb-4 animate-scale-in">
               🔥 Event Terpopuler
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gradient-primary animate-fade-in-up stagger-1">
               Event Terbaru & Terhangat
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto animate-fade-in-up stagger-2">
               Jangan lewatkan kesempatan emas untuk berkompetisi di turnamen esports terbesar dan meraih hadiah jutaan rupiah!
             </p>
           </div>
           
           {/* Featured Event (Large) */}
-          <div className="mb-12">
-            <Card className="overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 shadow-2xl">
+          <div className="mb-12 animate-fade-in-up stagger-3">
+            <Card className="overflow-hidden bg-gradient-primary text-white border-0 shadow-2xl card-hover hover-glow">
               <div className="flex flex-col lg:flex-row">
                 <div className="lg:w-1/2 p-8 lg:p-12">
                   <div className="flex items-center gap-2 mb-4">
@@ -154,7 +154,7 @@ export default function HomePage() {
                   
                   <div className="flex gap-4">
                     <Link href="/events/mlbb-world-championship-2024">
-                      <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
+                      <Button size="lg" className="bg-white text-primary hover:bg-gray-100 font-semibold">
                         Daftar Sekarang
                       </Button>
                     </Link>
@@ -167,7 +167,7 @@ export default function HomePage() {
                 </div>
                 
                 <div className="lg:w-1/2 relative min-h-[300px] lg:min-h-[400px]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20"></div>
+                  <div className="absolute inset-0 bg-gradient-primary opacity-20"></div>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-4 mx-auto">
@@ -175,7 +175,7 @@ export default function HomePage() {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <p className="text-sm text-blue-100">Tonton Highlight</p>
+                      <p className="text-sm text-white/90">Tonton Highlight</p>
                     </div>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ export default function HomePage() {
           {/* Other Events Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Event Card 1 */}
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group card-hover animate-fade-in-up stagger-1">
               <div className="relative h-48 bg-gradient-to-br from-red-500 to-red-600 overflow-hidden">
                 <div className="absolute top-4 right-4 bg-white/90 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
                   Valorant
@@ -266,7 +266,7 @@ export default function HomePage() {
             </Card>
 
             {/* Event Card 3 */}
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group">
+            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group card-hover animate-fade-in-up stagger-3">
               <div className="relative h-48 bg-gradient-to-br from-purple-500 to-purple-600 overflow-hidden">
                 <div className="absolute top-4 right-4 bg-white/90 text-purple-600 px-3 py-1 rounded-full text-sm font-bold">
                   Free Fire

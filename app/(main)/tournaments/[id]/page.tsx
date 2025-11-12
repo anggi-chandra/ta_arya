@@ -541,9 +541,19 @@ export default function TournamentDetailPage() {
                         minute: '2-digit'
                       })} WIB
                     </p>
-                    {new Date(tournament.registration_deadline) < new Date() && (
+                    {/* Pendaftaran ditutup hanya jika turnamen sudah dimulai */}
+                    {tournament.starts_at && new Date(tournament.starts_at) <= new Date() && (
                       <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                         Pendaftaran sudah ditutup
+                      </p>
+                    )}
+                    {/* Tampilkan peringatan jika deadline sudah lewat tapi turnamen belum dimulai */}
+                    {tournament.registration_deadline && 
+                     new Date(tournament.registration_deadline) < new Date() && 
+                     tournament.starts_at && 
+                     new Date(tournament.starts_at) > new Date() && (
+                      <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">
+                        Batas pendaftaran sudah lewat, namun pendaftaran masih dibuka hingga turnamen dimulai
                       </p>
                     )}
                   </div>
@@ -602,8 +612,12 @@ export default function TournamentDetailPage() {
                     </p>
                   </div>
                 )}
-                {/* Tombol pendaftaran hanya muncul jika registration deadline belum lewat dan status bukan cancelled/completed */}
-                {tournament.registration_deadline && new Date(tournament.registration_deadline) >= new Date() 
+                {/* Tombol pendaftaran hanya muncul jika:
+                    1. turnamen belum dimulai (starts_at > sekarang) - ini yang utama
+                    2. status bukan cancelled/completed
+                    Note: registration_deadline hanya sebagai informasi, bukan batas mutlak
+                */}
+                {(!tournament.starts_at || new Date(tournament.starts_at) > new Date())
                   && tournament.status !== 'cancelled' && tournament.status !== 'completed' && (
                   <>
                     {!session ? (
@@ -634,7 +648,8 @@ export default function TournamentDetailPage() {
                     )}
                   </>
                 )}
-                {tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date() && (
+                {/* Tampilkan "Pendaftaran sudah ditutup" hanya jika turnamen sudah dimulai */}
+                {tournament.starts_at && new Date(tournament.starts_at) <= new Date() && (
                   <div className="text-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 py-2 rounded-lg">
                     Pendaftaran sudah ditutup
                   </div>

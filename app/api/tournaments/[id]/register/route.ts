@@ -143,27 +143,22 @@ export async function POST(
       )
     }
 
-    // Check if registration deadline has passed
-    if (tournament.registration_deadline) {
-      const deadline = new Date(tournament.registration_deadline)
-      if (new Date() > deadline) {
-        return NextResponse.json(
-          { error: 'Pendaftaran sudah ditutup' },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Check if tournament has started
+    // Check if tournament has started (pendaftaran ditutup setelah turnamen dimulai)
+    // Registration deadline hanya sebagai informasi, bukan batas mutlak untuk menutup pendaftaran
+    // Pendaftaran hanya ditutup ketika turnamen sudah dimulai
     if (tournament.starts_at) {
       const startsAt = new Date(tournament.starts_at)
       if (new Date() >= startsAt) {
         return NextResponse.json(
-          { error: 'Tournament has already started' },
+          { error: 'Pendaftaran sudah ditutup karena turnamen sudah dimulai' },
           { status: 400 }
         )
       }
     }
+    
+    // Note: Registration deadline tidak digunakan untuk menutup pendaftaran
+    // Deadline hanya sebagai informasi untuk user
+    // Pendaftaran tetap terbuka sampai turnamen dimulai
 
     // Check if team is already registered
     const { data: existingRegistration } = await supabase

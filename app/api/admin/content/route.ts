@@ -12,22 +12,14 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
   const search = searchParams.get('search') || ''
   const type = searchParams.get('type') || ''
   const status = searchParams.get('status') || ''
-  const category = searchParams.get('category') || ''
   
   const offset = (page - 1) * limit
 
   try {
-    // Build query for content with author info
+    // Build query for content - fetch content first, then author separately if needed
     let query = supabase
       .from('content')
-      .select(`
-        *,
-        author:profiles!content_author_id_fkey (
-          full_name,
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false })
 
@@ -46,17 +38,51 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
       query = query.eq('status', status)
     }
 
-    // Add category filter
-    if (category) {
-      query = query.eq('category', category)
-    }
-
     const { data: content, error: contentError } = await query
 
     if (contentError) {
+      console.error('Error fetching content:', contentError)
+      console.error('Error details:', JSON.stringify(contentError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to fetch content' },
+        { 
+          error: 'Failed to fetch content', 
+          details: contentError.message,
+          code: contentError.code,
+          hint: contentError.hint
+        },
         { status: 500 }
+      )
+    }
+
+    console.log(`Fetched ${content?.length || 0} content items`)
+
+    // Fetch author profiles separately if author_id exists
+    // Skip if no content
+    let contentWithAuthors = []
+    if (content && content.length > 0) {
+      contentWithAuthors = await Promise.all(
+        content.map(async (item: any) => {
+          if (item.author_id) {
+            try {
+              const { data: authorData, error: authorError } = await supabase
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', item.author_id)
+                .single()
+              
+              if (authorError) {
+                console.error(`Error fetching author for content ${item.id}:`, authorError)
+                return { ...item, author: null }
+              }
+              
+              return { ...item, author: authorData || null }
+            } catch (err) {
+              console.error(`Error fetching author for content ${item.id}:`, err)
+              return { ...item, author: null }
+            }
+          }
+          return { ...item, author: null }
+        })
       )
     }
 
@@ -74,9 +100,6 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
     if (status) {
       countQuery = countQuery.eq('status', status)
     }
-    if (category) {
-      countQuery = countQuery.eq('category', category)
-    }
 
     const { count, error: countError } = await countQuery
 
@@ -88,7 +111,7 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
     }
 
     return NextResponse.json({
-      content,
+      content: contentWithAuthors || [],
       pagination: {
         page,
         limit,
@@ -116,12 +139,8 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       content,
       excerpt,
       type,
-      category,
       status = 'draft',
-      featured_image_url,
-      tags,
-      meta_title,
-      meta_description,
+      featured_image, // Use featured_image instead of featured_image_url
       published_at
     } = body
 
@@ -182,29 +201,36 @@ export const POST = withModeratorAuth(async (req: NextRequest, user: any) => {
       publishedAt = new Date()
     }
 
+    // Prepare insert data - only use columns that exist in schema
+    const insertData: any = {
+      title,
+      slug: finalSlug,
+      content,
+      excerpt: excerpt || null,
+      type,
+      status,
+      author_id: user.id,
+    }
+
+    // Add optional fields only if they exist
+    if (featured_image) {
+      insertData.featured_image = featured_image
+    }
+
+    if (publishedAt) {
+      insertData.published_at = publishedAt.toISOString()
+    }
+
     const { data, error } = await supabase
       .from('content')
-      .insert({
-        title,
-        slug: finalSlug,
-        content,
-        excerpt,
-        type,
-        category,
-        status,
-        featured_image_url,
-        tags,
-        meta_title,
-        meta_description,
-        author_id: user.id,
-        published_at: publishedAt?.toISOString()
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
+      console.error('Error creating content:', error)
       return NextResponse.json(
-        { error: `Failed to create content: ${error.message}` },
+        { error: `Failed to create content: ${error.message}`, details: error },
         { status: 400 }
       )
     }

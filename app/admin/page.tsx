@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
-import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2, MessageSquare } from "lucide-react";
+import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2, MessageSquare, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
@@ -21,6 +21,18 @@ const quickActions = [
     href: "/admin/events", 
     icon: Calendar,
     description: "Kelola event dan kegiatan"
+  },
+  { 
+    name: "Permintaan Event", 
+    href: "/admin/event-requests", 
+    icon: Calendar,
+    description: "Kelola permintaan event dari user"
+  },
+  { 
+    name: "Pembelian Tiket", 
+    href: "/admin/tickets", 
+    icon: Ticket,
+    description: "Kelola pembelian tiket dari user"
   },
   { 
     name: "Kelola Turnamen", 
