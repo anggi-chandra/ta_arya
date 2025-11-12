@@ -5,9 +5,24 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Trophy, Activity } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  
+  // Fetch dashboard statistics
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/stats", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch dashboard stats");
+      }
+      return res.json();
+    },
+  });
   
   return (
     <div>
@@ -29,7 +44,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tim Saya</p>
-              <p className="text-2xl font-semibold">0</p>
+              <p className="text-2xl font-semibold">
+                {isLoadingStats ? "..." : stats?.teams || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -41,7 +58,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Event Mendatang</p>
-              <p className="text-2xl font-semibold">0</p>
+              <p className="text-2xl font-semibold">
+                {isLoadingStats ? "..." : stats?.upcomingEvents || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -53,7 +72,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Turnamen</p>
-              <p className="text-2xl font-semibold">0</p>
+              <p className="text-2xl font-semibold">
+                {isLoadingStats ? "..." : stats?.tournaments || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -65,7 +86,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Aktivitas</p>
-              <p className="text-2xl font-semibold">0</p>
+              <p className="text-2xl font-semibold">
+                {isLoadingStats ? "..." : stats?.activity || 0}
+              </p>
             </div>
           </div>
         </Card>
