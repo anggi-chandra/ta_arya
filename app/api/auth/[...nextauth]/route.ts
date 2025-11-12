@@ -9,7 +9,7 @@ const credentialsSchema = z.object({
   password: z.string().min(6),
 });
 
-export const authOptions = {
+const authOptions = {
   session: { strategy: "jwt" as const },
   providers: [
     Credentials({
