@@ -15,7 +15,7 @@ type Ticket = {
   event_id: string;
   user_id: string;
   ticket_type: string;
-  price_cents: number;
+  price_cents: number | null;
   qr_code: string;
   status: "active" | "used" | "cancelled" | "transferred";
   purchased_at: string;
@@ -456,7 +456,9 @@ export default function AdminTicketsPage() {
 
                 <div>
                   <Label>Harga</Label>
-                  <p className="font-bold text-primary text-lg">{formatCurrency(selectedTicket.price_cents)}</p>
+                  <p className="font-bold text-primary text-lg">
+                    {formatCurrency(selectedTicket.price_cents)}
+                  </p>
                 </div>
 
                 <div>

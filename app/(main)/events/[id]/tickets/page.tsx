@@ -194,7 +194,7 @@ export default function EventTicketsPage() {
     if (ticketType) {
       ticketPrice = ticketType.price || 0;
     }
-  } else if (event.price_cents) {
+  } else if (event.price_cents != null && typeof event.price_cents === 'number') {
     ticketPrice = event.price_cents / 100; // Convert cents to rupiah
   }
 
@@ -377,7 +377,7 @@ export default function EventTicketsPage() {
                       });
                     })()}
                   </div>
-                ) : event.price_cents ? (
+                ) : event.price_cents != null && typeof event.price_cents === 'number' ? (
                   <div className="border-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
                     <div className="flex items-center justify-between">
                       <div>

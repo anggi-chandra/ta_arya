@@ -117,7 +117,10 @@ export default function AdminEventRequestsPage() {
     },
   });
 
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (cents: number | null | undefined) => {
+    if (cents == null || typeof cents !== 'number') {
+      return 'Rp 0';
+    }
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -247,7 +250,7 @@ export default function AdminEventRequestsPage() {
                           <span>{request.location}</span>
                         </div>
                       )}
-                      {request.price_cents !== undefined && request.price_cents > 0 && (
+                      {request.price_cents != null && request.price_cents > 0 && (
                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                           <DollarSign className="h-4 w-4" />
                           <span>{formatCurrency(request.price_cents)}</span>
