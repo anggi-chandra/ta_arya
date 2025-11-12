@@ -10,11 +10,13 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '10')
   const search = searchParams.get('search') || ''
+  const includeInactive = searchParams.get('include_inactive') === 'true'
   
   const offset = (page - 1) * limit
 
   try {
     // Build query for categories with topic count
+    // Get all categories if include_inactive=true, otherwise only active
     let query = supabase
       .from('forum_categories')
       .select(`
@@ -23,8 +25,14 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
           id
         )
       `)
+    
+    if (!includeInactive) {
+      query = query.eq('is_active', true) // Only show active categories by default
+    }
+    
+    query = query
       .range(offset, offset + limit - 1)
-      .order('created_at', { ascending: false })
+      .order('name', { ascending: true }) // Order by name alphabetically
 
     // Add search filter
     if (search) {
@@ -44,6 +52,10 @@ export const GET = withModeratorAuth(async (req: NextRequest) => {
     let countQuery = supabase
       .from('forum_categories')
       .select('id', { count: 'exact', head: true })
+    
+    if (!includeInactive) {
+      countQuery = countQuery.eq('is_active', true) // Only count active categories by default
+    }
 
     if (search) {
       countQuery = countQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%`)

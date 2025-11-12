@@ -101,6 +101,18 @@ export const authOptions = {
         console.error('NextAuth signIn event error:', e);
       }
     },
+    async signOut() {
+      // Clear Supabase session on logout
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('Error signing out from Supabase:', e);
+      }
+    },
+  },
+  pages: {
+    signIn: "/login",
+    error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

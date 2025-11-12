@@ -6,27 +6,13 @@ export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   
   // Define public paths that don't require authentication
+  // Hanya login, register, dan API auth yang public
   const isPublicPath = 
     path === "/login" || 
     path === "/register" || 
-    path === "/" || 
     path.startsWith("/api/auth") ||
-    path.startsWith("/api/events") ||
-    path.startsWith("/api/tournaments") ||
     path.startsWith("/_next") ||
-    path.startsWith("/events") ||
-    path.startsWith("/teams") ||
-    path.startsWith("/tournaments") ||
-    path.startsWith("/community") ||
-    path.startsWith("/blog") ||
-    path.startsWith("/faq") ||
-    path.startsWith("/contact") ||
-    path.startsWith("/support");
-
-  // Define protected paths that require authentication
-  const isProtectedPath = 
-    path.startsWith("/dashboard") || 
-    path.startsWith("/admin");
+    path.startsWith("/favicon.ico");
 
   // Get the token and check if the user is authenticated
   const token = await getToken({ req });
@@ -47,10 +33,15 @@ export async function middleware(req: NextRequest) {
     return data.map((r: any) => r.role);
   }
 
-  // Redirect logic
+  // Redirect logic untuk public paths
   if (isPublicPath) {
-    // If user is on login/register page but already authenticated, redirect to dashboard
+    // If user is on login/register page but already authenticated, redirect based on role
     if ((path === "/login" || path === "/register") && isAuthenticated) {
+      const roles = await getUserRoles(token?.sub as string | undefined);
+      const isAdminOrModerator = roles.includes("admin") || roles.includes("moderator");
+      if (isAdminOrModerator) {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     
@@ -58,9 +49,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // If user is trying to access protected path but not authenticated, redirect to login
-  if (isProtectedPath && !isAuthenticated) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  // SEMUA PATH LAINNYA MEMERLUKAN AUTHENTICATION
+  // Jika user belum login
+  if (!isAuthenticated) {
+    // Untuk API routes, return 401 Unauthorized
+    if (path.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please login first." },
+        { status: 401 }
+      );
+    }
+    
+    // Untuk halaman web, redirect ke login dengan callbackUrl
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", path);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Enforce admin-only access for /admin routes
@@ -82,7 +85,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // For all other cases, proceed normally
+  // For all other authenticated cases, proceed normally
   return NextResponse.next();
 }
 

@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
-import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2 } from "lucide-react";
+import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
@@ -39,6 +39,12 @@ const quickActions = [
     href: "/admin/content", 
     icon: FileText,
     description: "Kelola konten dan artikel"
+  },
+  { 
+    name: "Kelola Forum", 
+    href: "/admin/forum", 
+    icon: MessageSquare,
+    description: "Kelola forum posts dan diskusi"
   },
   { 
     name: "Pengaturan", 

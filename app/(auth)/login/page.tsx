@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, LogIn, Github } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-export default function Login() {
+function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,8 +42,15 @@ export default function Login() {
       setIsLoading(false);
       setSuccess(true);
 
+      // Jika ada callbackUrl, redirect ke sana
+      if (callbackUrl) {
+        router.push(callbackUrl);
+        return;
+      }
+
+      // Jika tidak ada callbackUrl, redirect berdasarkan role
       const roles: string[] = data?.roles || [];
-      if (roles.includes("admin")) {
+      if (roles.includes("admin") || roles.includes("moderator")) {
         router.push("/admin");
       } else {
         router.push("/dashboard");
@@ -151,5 +161,17 @@ export default function Login() {
         </p>
       </Card>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-slate-900 to-gray-900 flex items-center justify-center">
+        <div className="text-white">Memuat...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

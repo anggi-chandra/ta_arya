@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { User, LogOut, Settings, UserCircle, Bell, Calendar, CheckCircle, CreditCard } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const navLinks = [
   { name: "Beranda", href: "/" },
@@ -22,6 +23,7 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.email === "admin@esportshub.local";
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -98,7 +100,19 @@ export function Navbar() {
   }, [status]);
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    try {
+      // Sign out without redirect to avoid NEXTAUTH_URL issues
+      await signOut({ 
+        redirect: false 
+      });
+      // Use window.location to ensure we use the current origin (not NEXTAUTH_URL)
+      // This prevents redirect to localhost:3001 or other incorrect URLs
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Error signing out:", error);
+      // Fallback: redirect to login anyway using current origin
+      window.location.href = "/login";
+    }
   };
 
   return (
