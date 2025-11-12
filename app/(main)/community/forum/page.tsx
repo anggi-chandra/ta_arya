@@ -10,7 +10,8 @@ export default async function ForumIndexPage() {
 
   const { data: categories, error } = await supabase
     .from("forum_categories")
-    .select("id, name, description")
+    .select("id, name, description, icon, color")
+    .eq("is_active", true)
     .order("name", { ascending: true });
 
   if (error) {
@@ -39,9 +40,18 @@ export default async function ForumIndexPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {list.map((c) => (
-          <Card key={c.id} className="p-6">
-            <h3 className="text-lg font-semibold mb-1">{c.name}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{c.description || ""}</p>
+          <Card key={c.id} className="p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-3 mb-2">
+              {c.icon && (
+                <span className="text-3xl flex-shrink-0">{c.icon}</span>
+              )}
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-1">{c.name}</h3>
+                {c.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{c.description}</p>
+                )}
+              </div>
+            </div>
             <Link href={`/community/forum/${c.id}`}>
               <Button size="sm">Lihat Topik</Button>
             </Link>

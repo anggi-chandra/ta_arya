@@ -110,7 +110,7 @@ export default function CommunityPage() {
         {/* Community Forum */}
         <Card className="p-6 bg-gray-900 dark:bg-gray-800 text-white">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-red-500">Community Forum</h2>
+            <h2 className="text-2xl font-bold text-white">Community Forum</h2>
             <Link href="/community/forum">
               <Button 
                 size="sm"
@@ -132,9 +132,13 @@ export default function CommunityPage() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-semibold">
-                        {post.categoryIcon || post.category.charAt(0).toUpperCase()}
-                      </div>
+                      {post.categoryIcon ? (
+                        <span className="text-3xl">{post.categoryIcon}</span>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-semibold">
+                          {post.category.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-white mb-2 line-clamp-1">

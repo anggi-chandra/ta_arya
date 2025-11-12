@@ -459,319 +459,321 @@ export default function AdminForumPage() {
       {/* Posts Tab */}
       {activeTab === "posts" && (
         <>
-      {/* Create Form */}
-      <Card className="p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Buat Forum Post Baru</h2>
-          <Button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            variant={showCreateForm ? "outline" : "default"}
-          >
-            {showCreateForm ? "Tutup" : <><Plus className="h-4 w-4 mr-2" />Buat Post</>}
-          </Button>
-        </div>
-
-        {showCreateForm && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Judul <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Masukkan judul post"
-                required
-              />
+          {/* Create Form */}
+          <Card className="p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Buat Forum Post Baru</h2>
+              <Button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                variant={showCreateForm ? "outline" : "default"}
+              >
+                {showCreateForm ? "Tutup" : <><Plus className="h-4 w-4 mr-2" />Buat Post</>}
+              </Button>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Kategori <span className="text-red-500">*</span>
-              </label>
-              {categories.length === 0 ? (
-                <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-md text-sm text-yellow-800 dark:text-yellow-300">
-                  Belum ada kategori forum yang aktif. Silakan buat kategori terlebih dahulu.
+
+            {showCreateForm && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Judul <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Masukkan judul post"
+                    required
+                  />
                 </div>
-              ) : (
-                <select
-                  value={newCategoryId}
-                  onChange={(e) => {
-                    const selectedValue = e.target.value;
-                    // Only set if not empty (placeholder)
-                    if (selectedValue) {
-                      setNewCategoryId(selectedValue);
-                    } else {
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Kategori <span className="text-red-500">*</span>
+                  </label>
+                  {categories.length === 0 ? (
+                    <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-md text-sm text-yellow-800 dark:text-yellow-300">
+                      Belum ada kategori forum yang aktif. Silakan buat kategori terlebih dahulu.
+                    </div>
+                  ) : (
+                    <select
+                      value={newCategoryId}
+                      onChange={(e) => {
+                        const selectedValue = e.target.value;
+                        // Only set if not empty (placeholder)
+                        if (selectedValue) {
+                          setNewCategoryId(selectedValue);
+                        } else {
+                          setNewCategoryId("");
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                    >
+                      <option value="" disabled>
+                        -- Pilih kategori --
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Konten <span className="text-red-500">*</span>
+                  </label>
+                  <Textarea
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    placeholder="Masukkan konten post"
+                    rows={6}
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-6 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newIsPinned}
+                      onChange={(e) => setNewIsPinned(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium">Pin Post</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newIsLocked}
+                      onChange={(e) => setNewIsLocked(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium">Lock Post</span>
+                  </label>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleCreate}
+                    disabled={createMutation.isPending || !newTitle.trim() || !newContent.trim() || !newCategoryId}
+                  >
+                    {createMutation.isPending ? "Menyimpan..." : "Buat Post"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNewTitle("");
+                      setNewContent("");
                       setNewCategoryId("");
-                    }
+                      setNewIsPinned(false);
+                      setNewIsLocked(false);
+                    }}
+                    disabled={createMutation.isPending}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Filters */}
+          <Card className="p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Cari</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Cari post..."
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Kategori</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => {
+                    setCategoryId(e.target.value);
+                    setPage(1);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
                 >
-                  <option value="" disabled>
-                    -- Pilih kategori --
-                  </option>
+                  <option value="">Semua kategori</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+          </Card>
+
+          {/* Topics List */}
+          {isLoading ? (
+            <div className="text-center py-8">Memuat...</div>
+          ) : isError ? (
+            <Card className="p-6 text-red-600">Gagal memuat data forum topics</Card>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {data?.topics.map((topic) => (
+                  <Card key={topic.id} className="p-6">
+                    {editingId === topic.id ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Judul</label>
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Kategori</label>
+                          {categories.length === 0 ? (
+                            <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-md text-sm text-yellow-800 dark:text-yellow-300">
+                              Belum ada kategori forum yang aktif.
+                            </div>
+                          ) : (
+                            <select
+                              value={editCategoryId}
+                              onChange={(e) => setEditCategoryId(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                              required
+                            >
+                              {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Konten</label>
+                          <Textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={6}
+                          />
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={editIsPinned}
+                              onChange={(e) => setEditIsPinned(e.target.checked)}
+                            />
+                            <span className="text-sm">Pinned</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={editIsLocked}
+                              onChange={(e) => setEditIsLocked(e.target.checked)}
+                            />
+                            <span className="text-sm">Locked</span>
+                          </label>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleUpdate(topic.id)}
+                            disabled={updateMutation.isPending}
+                          >
+                            {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
+                          </Button>
+                          <Button variant="outline" onClick={cancelEdit}>
+                            Batal
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-lg font-semibold">{topic.title}</h3>
+                              {topic.is_pinned && (
+                                <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                                  Pinned
+                                </span>
+                              )}
+                              {topic.is_locked && (
+                                <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                                  Locked
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              Kategori: {topic.category?.name || "N/A"} | 
+                              Oleh: {topic.author?.username || topic.author?.full_name || "Unknown"} | 
+                              Replies: {topic.reply_count || 0} | 
+                              Views: {topic.view_count || 0}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-500 line-clamp-2">
+                              {topic.content}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => startEdit(topic)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(topic.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {data && data.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Halaman {data.pagination.page} dari {data.pagination.totalPages} ({data.pagination.total} total)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
+                      disabled={page === data.pagination.totalPages}
+                    >
+                      Selanjutnya
+                    </Button>
+                  </div>
+                </div>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Konten <span className="text-red-500">*</span>
-              </label>
-              <Textarea
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                placeholder="Masukkan konten post"
-                rows={6}
-                required
-              />
-            </div>
-            <div className="flex items-center gap-6 pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newIsPinned}
-                  onChange={(e) => setNewIsPinned(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm font-medium">Pin Post</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newIsLocked}
-                  onChange={(e) => setNewIsLocked(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm font-medium">Lock Post</span>
-              </label>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleCreate}
-                disabled={createMutation.isPending || !newTitle.trim() || !newContent.trim() || !newCategoryId}
-              >
-                {createMutation.isPending ? "Menyimpan..." : "Buat Post"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setNewTitle("");
-                  setNewContent("");
-                  setNewCategoryId("");
-                  setNewIsPinned(false);
-                  setNewIsLocked(false);
-                }}
-                disabled={createMutation.isPending}
-              >
-                Reset
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
 
-      {/* Filters */}
-      <Card className="p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Cari</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Cari post..."
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Kategori</label>
-            <select
-              value={categoryId}
-              onChange={(e) => {
-                setCategoryId(e.target.value);
-                setPage(1);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="">Semua kategori</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </Card>
-
-      {/* Topics List */}
-      {isLoading ? (
-        <div className="text-center py-8">Memuat...</div>
-      ) : isError ? (
-        <Card className="p-6 text-red-600">Gagal memuat data forum topics</Card>
-      ) : (
-        <>
-          <div className="space-y-4 mb-6">
-            {data?.topics.map((topic) => (
-              <Card key={topic.id} className="p-6">
-                {editingId === topic.id ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Judul</label>
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Kategori</label>
-                      {categories.length === 0 ? (
-                        <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-600 rounded-md text-sm text-yellow-800 dark:text-yellow-300">
-                          Belum ada kategori forum yang aktif.
-                        </div>
-                      ) : (
-                        <select
-                          value={editCategoryId}
-                          onChange={(e) => setEditCategoryId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                          required
-                        >
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Konten</label>
-                      <Textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        rows={6}
-                      />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={editIsPinned}
-                          onChange={(e) => setEditIsPinned(e.target.checked)}
-                        />
-                        <span className="text-sm">Pinned</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={editIsLocked}
-                          onChange={(e) => setEditIsLocked(e.target.checked)}
-                        />
-                        <span className="text-sm">Locked</span>
-                      </label>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleUpdate(topic.id)}
-                        disabled={updateMutation.isPending}
-                      >
-                        {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
-                      </Button>
-                      <Button variant="outline" onClick={cancelEdit}>
-                        Batal
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold">{topic.title}</h3>
-                          {topic.is_pinned && (
-                            <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
-                              Pinned
-                            </span>
-                          )}
-                          {topic.is_locked && (
-                            <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
-                              Locked
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          Kategori: {topic.category?.name || "N/A"} | 
-                          Oleh: {topic.author?.username || topic.author?.full_name || "Unknown"} | 
-                          Replies: {topic.reply_count || 0} | 
-                          Views: {topic.view_count || 0}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500 line-clamp-2">
-                          {topic.content}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => startEdit(topic)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(topic.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {data && data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Halaman {data.pagination.page} dari {data.pagination.totalPages} ({data.pagination.total} total)
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                  disabled={page === data.pagination.totalPages}
-                >
-                  Selanjutnya
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {data && data.topics.length === 0 && (
-            <Card className="p-6 text-center text-gray-500">
-              Tidak ada forum posts ditemukan
-            </Card>
+              {data && data.topics.length === 0 && (
+                <Card className="p-6 text-center text-gray-500">
+                  Tidak ada forum posts ditemukan
+                </Card>
+              )}
+            </>
           )}
         </>
       )}
@@ -833,11 +835,45 @@ export default function AdminForumPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Icon</label>
-                    <Input
-                      value={newCategoryIcon}
-                      onChange={(e) => setNewCategoryIcon(e.target.value)}
-                      placeholder="Icon (opsional, contoh: 🎮)"
-                    />
+                    <div className="space-y-2">
+                      <Input
+                        value={newCategoryIcon}
+                        onChange={(e) => setNewCategoryIcon(e.target.value)}
+                        placeholder="Icon (opsional, contoh: 🎮)"
+                      />
+                      {newCategoryIcon && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span>Preview:</span>
+                          <span className="text-2xl">{newCategoryIcon}</span>
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Pilih icon populer:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {['🎮', '💬', '📢', '🎯', '🏆', '⚡', '🔥', '💡', '📚', '🎨', '🎵', '📱', '💻', '🎪', '🌟', '📺', '🎬', '🎤', '🎸', '🎲'].map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => setNewCategoryIcon(emoji)}
+                              className={`w-10 h-10 text-xl rounded border-2 transition-colors ${
+                                newCategoryIcon === emoji
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                              }`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewCategoryIcon('')}
+                          className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          Hapus icon
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -912,10 +948,45 @@ export default function AdminForumPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-2">Icon</label>
-                          <Input
-                            value={editCategoryIcon}
-                            onChange={(e) => setEditCategoryIcon(e.target.value)}
-                          />
+                          <div className="space-y-2">
+                            <Input
+                              value={editCategoryIcon}
+                              onChange={(e) => setEditCategoryIcon(e.target.value)}
+                              placeholder="Icon (opsional, contoh: 🎮)"
+                            />
+                            {editCategoryIcon && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <span>Preview:</span>
+                                <span className="text-2xl">{editCategoryIcon}</span>
+                              </div>
+                            )}
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Pilih icon populer:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {['🎮', '💬', '📢', '🎯', '🏆', '⚡', '🔥', '💡', '📚', '🎨', '🎵', '📱', '💻', '🎪', '🌟', '📺', '🎬', '🎤', '🎸', '🎲'].map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => setEditCategoryIcon(emoji)}
+                                    className={`w-10 h-10 text-xl rounded border-2 transition-colors ${
+                                      editCategoryIcon === emoji
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setEditCategoryIcon('')}
+                                className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                              >
+                                Hapus icon
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
