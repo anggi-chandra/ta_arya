@@ -3,6 +3,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+// Explicit route segment config to prevent client reference manifest issues
+export const dynamic = 'force-static';
+export const dynamicParams = false;
+export const revalidate = false;
+
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
