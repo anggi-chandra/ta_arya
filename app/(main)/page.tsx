@@ -205,17 +205,6 @@ export default async function HomePage() {
               </div>
             </div>
             
-            <div className="md:w-1/2 relative animate-fade-in-right">
-              <div className="relative h-96 md:h-[500px] w-full animate-float">
-                <div className="absolute inset-0 bg-gradient-primary opacity-30 rounded-3xl blur-3xl animate-pulse-slow"></div>
-                <Image
-                  src="/images/hero-esports.svg"
-                  alt="Esports Tournament"
-                  fill
-                  className="object-contain relative z-10"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </section>
