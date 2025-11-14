@@ -897,7 +897,7 @@ export default function AdminEventsPage() {
                           {ev.capacity && (
                             <div className="text-gray-500">Kapasitas: {ev.capacity}</div>
                           )}
-                          {ev.price_cents != null && typeof ev.price_cents === 'number' && (
+                          {ev.price_cents !== undefined && (
                             <div className="text-gray-500">
                               {ev.price_cents > 0 ? `Rp ${(ev.price_cents / 100).toLocaleString('id-ID')}` : 'Gratis'}
                             </div>
