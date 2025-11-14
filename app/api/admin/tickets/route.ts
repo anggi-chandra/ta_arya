@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withModeratorAuth } from '@/lib/auth'
 import { getSupabaseClient } from '@/lib/auth'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/tickets - Get all event tickets (admin only)
 export const GET = withModeratorAuth(async (req: NextRequest) => {
   const supabase = getSupabaseClient()

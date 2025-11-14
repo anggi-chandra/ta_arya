@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient, withNextAuthSession } from '@/lib/auth'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/notifications - List current user's notifications
 export const GET = withNextAuthSession(async (req: NextRequest, user: any) => {
   const supabase = getSupabaseClient()

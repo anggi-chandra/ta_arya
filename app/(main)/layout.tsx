@@ -20,6 +20,8 @@ const Navbar = dynamicImport(() => import("@/components/ui/navbar").then(mod => 
 
 // Ensure pages under this layout are properly handled
 export const dynamicParams = false;
+// Force dynamic rendering to avoid client-reference-manifest issues with dynamic imports
+export const dynamic = 'force-dynamic';
 
 export default function MainLayout({
   children,

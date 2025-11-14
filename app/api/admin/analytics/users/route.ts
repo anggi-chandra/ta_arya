@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/auth'
 import { withAdminAuth } from '@/lib/auth'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/analytics/users - Get user analytics data
 export const GET = withAdminAuth(async (req: NextRequest) => {
   const supabase = getSupabaseClient()

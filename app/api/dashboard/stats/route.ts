@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getSupabaseClient } from '@/lib/auth';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/dashboard/stats - Get user dashboard statistics
 export async function GET(request: NextRequest) {
   try {
