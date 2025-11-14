@@ -18,8 +18,7 @@ const Navbar = dynamicImport(() => import("@/components/ui/navbar").then(mod => 
   )
 });
 
-// Force static generation for pages under this layout
-export const dynamic = 'force-static';
+// Ensure pages under this layout are properly handled
 export const dynamicParams = false;
 
 export default function MainLayout({

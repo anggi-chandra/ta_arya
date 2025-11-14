@@ -3,6 +3,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+// Mark as dynamic to avoid client reference manifest issues
+export const dynamic = 'force-dynamic';
+
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">

@@ -444,7 +444,7 @@ create table if not exists public.forum_topics (
   category_id uuid references public.forum_categories(id) on delete cascade,
   title text not null,
   content text not null,
-  author_id uuid references auth.users(id) on delete set null,
+  author_id uuid references public.profiles(id) on delete set null,
   is_pinned boolean default false,
   is_locked boolean default false,
   view_count int default 0,
@@ -465,7 +465,7 @@ create table if not exists public.forum_replies (
   id uuid primary key default gen_random_uuid(),
   topic_id uuid references public.forum_topics(id) on delete cascade,
   content text not null,
-  author_id uuid references auth.users(id) on delete set null,
+  author_id uuid references public.profiles(id) on delete set null,
   parent_id uuid references public.forum_replies(id) on delete cascade,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
