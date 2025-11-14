@@ -18,6 +18,10 @@ const Navbar = dynamic(() => import("@/components/ui/navbar").then(mod => ({ def
   )
 });
 
+// Force static generation for pages under this layout
+export const dynamic = 'force-static';
+export const dynamicParams = false;
+
 export default function MainLayout({
   children,
 }: {
