@@ -1,8 +1,8 @@
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 import Footer from "@/components/ui/footer";
 
 // Dynamically import Navbar with SSR disabled to avoid context issues
-const Navbar = dynamic(() => import("@/components/ui/navbar").then(mod => ({ default: mod.Navbar })), {
+const Navbar = dynamicImport(() => import("@/components/ui/navbar").then(mod => ({ default: mod.Navbar })), {
   ssr: false,
   loading: () => (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-[1000] shadow-sm">
