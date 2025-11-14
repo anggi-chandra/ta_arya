@@ -169,20 +169,65 @@ vercel env add NEXTAUTH_SECRET
 
 ## Langkah 5: Konfigurasi Supabase
 
-### 5.1. Update Supabase Auth URLs
+### 5.1. Dapatkan URL Vercel Anda
 
-1. Buka Supabase Dashboard → Authentication → URL Configuration
-2. Tambahkan URL Vercel Anda ke **Redirect URLs**:
-   - `https://your-app.vercel.app/api/auth/callback/next-auth`
-   - `https://your-app.vercel.app/auth/callback`
-3. Tambahkan ke **Site URL**:
-   - `https://your-app.vercel.app`
+**Cara menemukan URL Vercel:**
 
-### 5.2. Update RLS Policies (jika perlu)
+1. **Setelah deployment selesai:**
+   - Setelah push ke GitHub/GitLab, Vercel otomatis akan deploy
+   - URL akan muncul di terminal atau di dashboard Vercel
+
+2. **Dari Dashboard Vercel:**
+   - Buka [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Klik project Anda
+   - Di bagian **Overview**, lihat **Domains** - URL akan terlihat di sini
+   - Format URL: `https://your-project-name.vercel.app`
+   
+   ![Lokasi URL di Vercel Dashboard: Overview tab → bagian Domains]
+
+3. **Setelah build berhasil:**
+   - Di halaman project, scroll ke bagian **Deployments**
+   - Klik deployment terbaru
+   - URL akan muncul di bagian atas: `Visit: https://your-app.vercel.app`
+
+4. **Format URL Vercel:**
+   - Default: `https://[project-name].vercel.app`
+   - Preview: `https://[project-name]-[git-username].vercel.app` (untuk preview deployments)
+   - Production: `https://[project-name].vercel.app` atau custom domain Anda
+
+**Contoh:**
+- Jika project name: `esports-hub`
+- Production URL: `https://esports-hub.vercel.app`
+- Preview URL: `https://esports-hub-git-main-username.vercel.app`
+
+### 5.2. Update Supabase Auth URLs
+
+1. Buka **Supabase Dashboard** → **Authentication** → **URL Configuration**
+2. Di bagian **Redirect URLs**, tambahkan URL Vercel Anda:
+   ```
+   https://your-app.vercel.app/api/auth/callback/next-auth
+   https://your-app.vercel.app/auth/callback
+   ```
+   *Ganti `your-app.vercel.app` dengan URL Vercel Anda yang sebenarnya*
+   
+3. Di bagian **Site URL**, tambahkan:
+   ```
+   https://your-app.vercel.app
+   ```
+   *Ganti `your-app.vercel.app` dengan URL Vercel Anda yang sebenarnya*
+
+**Contoh jika URL Vercel Anda adalah `esports-hub.vercel.app`:**
+- Redirect URLs:
+  - `https://esports-hub.vercel.app/api/auth/callback/next-auth`
+  - `https://esports-hub.vercel.app/auth/callback`
+- Site URL:
+  - `https://esports-hub.vercel.app`
+
+### 5.3. Update RLS Policies (jika perlu)
 
 Pastikan RLS policies di Supabase sudah benar untuk production environment.
 
-### 5.3. Run Database Migrations
+### 5.4. Run Database Migrations
 
 Jika ada migration files di `supabase/migrations/`, jalankan di Supabase Dashboard:
 1. Buka Supabase Dashboard → SQL Editor
