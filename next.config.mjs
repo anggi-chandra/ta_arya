@@ -15,11 +15,12 @@ const nextConfig = {
       },
     ],
   },
-  // Suppress client reference manifest warnings during build
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // Optimize client component bundling to prevent manifest issues
+    optimizePackageImports: ['@/components/ui'],
   },
 };
 
