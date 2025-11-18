@@ -227,7 +227,7 @@ export default async function HomePage() {
       <section className="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in-up">
-            <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary-start dark:text-primary-start text-sm font-medium mb-4 animate-scale-in">
+            <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4 animate-scale-in">
               🔥 Event Terpopuler
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary animate-fade-in-up stagger-1">
