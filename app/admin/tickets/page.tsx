@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Calendar, User, Ticket, MapPin, Hash } from "lucide-react";
+import { Search, Calendar, User, Ticket, MapPin, Hash, Loader2 } from "lucide-react";
 
 type Ticket = {
   id: string;
@@ -54,9 +54,16 @@ export default function AdminTicketsPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [updatingTicketId, setUpdatingTicketId] = useState<string | null>(null);
+  const [ticketStatuses, setTicketStatuses] = useState<Record<string, Ticket["status"]>>({});
+  const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Record<string, Ticket["status"]>>({});
+  
+  const queryClient = useQueryClient();
+
+  const queryKey = ["admin-tickets", { search, eventId, status, ticketType, page, limit }] as const;
 
   const { data, isLoading, isError, error } = useQuery<TicketsResponse>({
-    queryKey: ["admin-tickets", { search, eventId, status, ticketType, page, limit }],
+    queryKey,
     queryFn: async (): Promise<TicketsResponse> => {
       const params = new URLSearchParams({
         page: String(page),
@@ -77,6 +84,58 @@ export default function AdminTicketsPage() {
     },
   });
 
+  useEffect(() => {
+    if (!data?.tickets) return;
+
+    const idsToClear: string[] = [];
+
+    setTicketStatuses((prev) => {
+      const updated = { ...prev };
+      let changed = false;
+
+      data.tickets.forEach((ticket) => {
+        const pendingStatus = pendingStatusUpdates[ticket.id];
+        if (pendingStatus !== undefined) {
+          if (ticket.status === pendingStatus) {
+            idsToClear.push(ticket.id);
+          } else {
+            // Keep optimistic value while server data catches up
+            if (updated[ticket.id] === undefined) {
+              updated[ticket.id] = pendingStatus;
+              changed = true;
+            }
+            return;
+          }
+        }
+
+        if (updated[ticket.id] !== ticket.status) {
+          updated[ticket.id] = ticket.status;
+          changed = true;
+        }
+      });
+
+      // Remove statuses for tickets no longer in the list
+      Object.keys(updated).forEach((id) => {
+        if (!data.tickets.find((ticket) => ticket.id === id)) {
+          delete updated[id];
+          changed = true;
+        }
+      });
+
+      return changed ? updated : prev;
+    });
+
+    if (idsToClear.length > 0) {
+      setPendingStatusUpdates((prev) => {
+        const next = { ...prev };
+        idsToClear.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }
+  }, [data?.tickets, pendingStatusUpdates]);
+
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -93,6 +152,133 @@ export default function AdminTicketsPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Mutation for updating ticket status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ ticketId, newStatus }: { ticketId: string; newStatus: string }) => {
+      const res = await fetch(`/api/admin/tickets/${ticketId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Gagal mengupdate status tiket');
+      }
+
+      return res.json();
+    },
+    onMutate: async ({ ticketId, newStatus }) => {
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousData = queryClient.getQueryData<TicketsResponse>(queryKey);
+
+      queryClient.setQueryData<TicketsResponse | undefined>(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          tickets: old.tickets.map((ticket) =>
+            ticket.id === ticketId ? { ...ticket, status: newStatus as Ticket["status"] } : ticket
+          ),
+        };
+      });
+
+      setSelectedTicket((prev) =>
+        prev && prev.id === ticketId ? { ...prev, status: newStatus as Ticket["status"] } : prev
+      );
+
+      return { previousData };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+    },
+    onSuccess: (response, { ticketId }) => {
+      const updatedTicket = response?.ticket as Ticket | undefined;
+      if (updatedTicket) {
+        queryClient.setQueryData<TicketsResponse | undefined>(queryKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tickets: old.tickets.map((ticket) =>
+              ticket.id === ticketId ? { ...ticket, ...updatedTicket } : ticket
+            ),
+          };
+        });
+
+        setSelectedTicket((prev) =>
+          prev && prev.id === ticketId ? { ...prev, ...updatedTicket } : prev
+        );
+
+        setTicketStatuses((prev) => ({
+          ...prev,
+          [ticketId]: updatedTicket.status,
+        }));
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    const previousStatus =
+      ticketStatuses[ticketId] ??
+      data?.tickets.find((t) => t.id === ticketId)?.status ||
+      (selectedTicket?.id === ticketId ? selectedTicket.status : undefined);
+
+    setTicketStatuses((prev) => ({
+      ...prev,
+      [ticketId]: newStatus as Ticket["status"],
+    }));
+    setPendingStatusUpdates((prev) => ({
+      ...prev,
+      [ticketId]: newStatus as Ticket["status"],
+    }));
+
+    setUpdatingTicketId(ticketId);
+    let didSucceed = false;
+    try {
+      await updateStatusMutation.mutateAsync({ ticketId, newStatus });
+      didSucceed = true;
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      alert(error instanceof Error ? error.message : 'Gagal mengupdate status tiket');
+      if (previousStatus) {
+        queryClient.setQueryData<TicketsResponse | undefined>(queryKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tickets: old.tickets.map((ticket) =>
+              ticket.id === ticketId ? { ...ticket, status: previousStatus } : ticket
+            ),
+          };
+        });
+
+        setTicketStatuses((prev) => ({
+          ...prev,
+          [ticketId]: previousStatus,
+        }));
+
+        setSelectedTicket((prev) =>
+          prev && prev.id === ticketId ? { ...prev, status: previousStatus } : prev
+        );
+      }
+    } finally {
+      setUpdatingTicketId(null);
+      if (!didSucceed) {
+        setPendingStatusUpdates((prev) => {
+          const { [ticketId]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -264,7 +450,25 @@ export default function AdminTicketsPage() {
                             <span className="font-medium">Tipe:</span>
                             <span className="capitalize px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{ticket.ticket_type}</span>
                           </div>
-                          {getStatusBadge(ticket.status)}
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Status:</span>
+                            <div className="relative">
+                              <Select
+                                value={ticketStatuses[ticket.id] ?? ticket.status}
+                                onValueChange={(value) => handleStatusChange(ticket.id, value)}
+                                disabled={updatingTicketId === ticket.id}
+                                className="text-xs min-w-[120px]"
+                              >
+                                <option value="active">Aktif</option>
+                                <option value="used">Digunakan</option>
+                                <option value="cancelled">Dibatalkan</option>
+                                <option value="transferred">Ditransfer</option>
+                              </Select>
+                              {updatingTicketId === ticket.id && (
+                                <Loader2 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 animate-spin text-primary" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -461,7 +665,24 @@ export default function AdminTicketsPage() {
 
                 <div>
                   <Label>Status</Label>
-                  <div className="mt-1">{getStatusBadge(selectedTicket.status)}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Select
+                        value={ticketStatuses[selectedTicket.id] ?? selectedTicket.status}
+                        onValueChange={(value) => handleStatusChange(selectedTicket.id, value)}
+                        disabled={updatingTicketId === selectedTicket.id}
+                        className="w-full"
+                      >
+                        <option value="active">Aktif</option>
+                        <option value="used">Digunakan</option>
+                        <option value="cancelled">Dibatalkan</option>
+                        <option value="transferred">Ditransfer</option>
+                      </Select>
+                      {updatingTicketId === selectedTicket.id && (
+                        <Loader2 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div>

@@ -69,7 +69,7 @@ export default function Register() {
   }, [email, password, confirmPassword, fullName]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-slate-900 to-gray-900 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-6">
       <Card className="w-full max-w-md p-8 shadow-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Daftar Akun Baru</h1>

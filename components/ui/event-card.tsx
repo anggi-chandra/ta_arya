@@ -91,7 +91,7 @@ export function EventCard({
         </div>
         
         <Link href={`/events/${id}`} className="mt-4 inline-block w-full">
-          <button className="w-full rounded bg-blue-600 py-2 text-center text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+          <button className="w-full rounded bg-gradient-primary py-2 text-center text-sm font-medium text-white hover:opacity-90 transition-colors">
             View Details
           </button>
         </Link>

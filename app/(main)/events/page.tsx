@@ -385,7 +385,7 @@ export default function EventsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {ongoingEvents.map((e) => (
               <Card key={e.id} className="overflow-hidden shadow-sm hover:shadow-md">
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+                <div className="bg-gradient-primary text-white p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm opacity-80 mb-1">{e.game} • {e.type.toUpperCase()}</div>

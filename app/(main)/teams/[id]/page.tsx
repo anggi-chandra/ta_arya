@@ -145,7 +145,7 @@ export default function TeamDetailPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header Section */}
-      <div className="relative rounded-lg overflow-hidden h-64 mb-8 bg-gradient-to-r from-purple-900 to-indigo-900">
+      <div className="relative rounded-lg overflow-hidden h-64 mb-8 bg-gradient-primary">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute bottom-0 left-0 p-6 z-10">
           <div className="flex items-center gap-4 mb-4">

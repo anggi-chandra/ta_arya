@@ -120,6 +120,18 @@ async function getStats() {
   }
 }
 
+function formatStatCount(count: number) {
+  if (count >= 1_000_000) {
+    const value = count / 1_000_000;
+    return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}M`;
+  }
+  if (count >= 1_000) {
+    const value = count / 1_000;
+    return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}K`;
+  }
+  return count.toLocaleString("id-ID");
+}
+
 export default async function HomePage() {
   const events = await getEvents();
   const teams = await getTeams();
@@ -169,7 +181,7 @@ export default async function HomePage() {
               </div>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-2xl animate-fade-in-up stagger-1">
                 <span className="text-white">Wujudkan Impian</span>
-                <span className="text-gradient-primary drop-shadow-lg"> Esports</span>
+                <span className="text-primary drop-shadow-lg"> Esports</span>
                 <span className="text-white"> Anda</span>
               </h1>
               <p className="text-xl mb-8 text-white/95 leading-relaxed drop-shadow-lg animate-fade-in-up stagger-2">
@@ -191,7 +203,9 @@ export default async function HomePage() {
               {/* Stats */}
               <div className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/20 animate-fade-in-up stagger-4">
                 <div className="text-center hover:scale-110 transition-transform duration-300">
-                  <div className="text-3xl font-bold text-primary-start">{stats.users > 0 ? `${(stats.users / 1000).toFixed(0)}K+` : '0'}</div>
+                  <div className="text-3xl font-bold text-primary-start">
+                    {stats.users > 0 ? `${formatStatCount(stats.users)}+` : '0'}
+                  </div>
                   <div className="text-sm text-gray-300">Pengguna Aktif</div>
                 </div>
                 <div className="text-center hover:scale-110 transition-transform duration-300">
@@ -216,7 +230,7 @@ export default async function HomePage() {
             <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary-start dark:text-primary-start text-sm font-medium mb-4 animate-scale-in">
               🔥 Event Terpopuler
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gradient-primary animate-fade-in-up stagger-1">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary animate-fade-in-up stagger-1">
               Event Terbaru & Terhangat
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto animate-fade-in-up stagger-2">
@@ -344,14 +358,14 @@ export default async function HomePage() {
                 return (
                   <Card key={event.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 group card-hover animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
                     {event.image_url && (
-                      <div className="relative h-48 bg-gradient-to-br from-red-500 to-red-600 overflow-hidden">
+                      <div className="relative h-48 bg-gradient-primary overflow-hidden">
                         <Image
                           src={event.image_url}
                           alt={event.title}
                           fill
                           className="object-cover"
                         />
-                        <div className="absolute top-4 right-4 bg-white/90 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
+                        <div className="absolute top-4 right-4 bg-white/90 text-primary px-3 py-1 rounded-full text-sm font-bold">
                           {event.game || 'Event'}
                         </div>
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -412,10 +426,10 @@ export default async function HomePage() {
         <section className="py-20 bg-white dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-purple-100 dark:bg-purple-900/30 rounded-full text-purple-600 dark:text-purple-400 text-sm font-medium mb-4">
+              <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4">
                 🏆 Komunitas Terbaik
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
                 Tim & Komunitas Terdepan
               </h2>
               <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
@@ -437,7 +451,7 @@ export default async function HomePage() {
                 {teams.map((team: any) => (
                   <Link key={team.id} href={`/teams/${team.id}`}>
                     <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer">
-                      <div className="relative h-32 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <div className="relative h-32 bg-gradient-primary flex items-center justify-center">
                         {team.logo_url ? (
                           <Image
                             src={team.logo_url}
@@ -448,7 +462,7 @@ export default async function HomePage() {
                           />
                         ) : (
                           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-                            <span className="text-2xl font-bold text-blue-600">{team.name.charAt(0).toUpperCase()}</span>
+                            <span className="text-2xl font-bold text-white">{team.name.charAt(0).toUpperCase()}</span>
                           </div>
                         )}
                         {team.recruiting && (
@@ -475,7 +489,7 @@ export default async function HomePage() {
       )}
 
       {/* CTA Section */}
-      <section className="relative py-20 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white overflow-hidden">
+      <section className="relative py-20 bg-gradient-primary text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:60px_60px]"></div>
         </div>
@@ -487,11 +501,11 @@ export default async function HomePage() {
             </div>
             <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Siap Menjadi
-              <span className="block bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+              <span className="block text-primary">
                 Esports Legend?
               </span>
             </h2>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-3xl mx-auto leading-relaxed">
               Bergabunglah dengan ribuan gamer Indonesia dan mulai perjalanan esports Anda.
               Dari turnamen lokal hingga kompetisi internasional, semuanya dimulai dari sini.
             </p>
@@ -500,7 +514,7 @@ export default async function HomePage() {
           <div className="text-center">
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Link href="/register">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                <Button size="lg" className="bg-white text-primary hover:bg-gray-100 px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -508,7 +522,7 @@ export default async function HomePage() {
                 </Button>
               </Link>
               <Link href="/contact">
-                <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 text-lg font-semibold transition-all duration-300 transform hover:scale-105">
+                <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 text-lg font-semibold transition-all duration-300 transform hover:scale-105">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>

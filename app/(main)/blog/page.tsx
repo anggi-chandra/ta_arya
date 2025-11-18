@@ -336,10 +336,10 @@ export default function BlogPage() {
 
       {/* Newsletter Subscription */}
       <section className="mb-12">
-        <Card className="p-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <Card className="p-8 bg-gradient-primary text-white">
           <div className="text-center mb-6">
             <h3 className="text-2xl font-bold mb-2">Dapatkan Update Terbaru</h3>
-            <p className="text-blue-100">
+            <p className="text-white/90">
               Berlangganan newsletter kami untuk mendapatkan berita dan tips esports terbaru
             </p>
           </div>
@@ -349,7 +349,7 @@ export default function BlogPage() {
               placeholder="Alamat email Anda"
               className="flex-1 px-4 py-2 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none"
             />
-            <Button className="bg-white text-blue-600 hover:bg-gray-100">Berlangganan</Button>
+            <Button className="bg-white text-primary hover:bg-gray-100">Berlangganan</Button>
           </div>
         </Card>
       </section>

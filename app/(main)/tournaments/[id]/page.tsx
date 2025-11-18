@@ -1,12 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
-import { TournamentBracket } from "@/components/ui/tournament-bracket";
+import { TournamentBracket, BracketRound } from "@/components/ui/tournament-bracket";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
+
+type TournamentParticipant = {
+  team_id: string;
+  status: string;
+  seed?: number | null;
+  checked_in_at?: string | null;
+  registered_at?: string | null;
+  team?: {
+    id: string;
+    name: string | null;
+    logo_url?: string | null;
+    game?: string | null;
+  } | null;
+};
+
+type TournamentMatchResponse = {
+  id: string;
+  round: number;
+  match_number: number;
+  status: string;
+  score_team1: number | null;
+  score_team2: number | null;
+  team1?: {
+    id: string;
+    name: string | null;
+  } | null;
+  team2?: {
+    id: string;
+    name: string | null;
+  } | null;
+  winner?: {
+    id: string;
+    name: string | null;
+  } | null;
+};
 
 export default function TournamentDetailPage() {
   const params = useParams();
@@ -19,6 +54,10 @@ export default function TournamentDetailPage() {
   const [registeredCount, setRegisteredCount] = useState<number>(0);
   const [isLoadingTournament, setIsLoadingTournament] = useState(true);
   const [organizer, setOrganizer] = useState<any | null>(null);
+  const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(true);
+  const [bracketRounds, setBracketRounds] = useState<BracketRound[]>([]);
+  const [isLoadingBracket, setIsLoadingBracket] = useState(true);
   
   // Data dummy untuk fallback UI
   const tournamentDetail = {
@@ -87,6 +126,78 @@ export default function TournamentDetailPage() {
     sponsors: ["ESports Hub", "Mobile Legends", "ROG"]
   };
 
+  const getRoundLabel = (round: number) => {
+    const roundLabels: Record<number, string> = {
+      1: "Babak 1",
+      2: "Babak 2",
+      3: "Perempat Final",
+      4: "Semi Final",
+      5: "Final",
+    };
+    return roundLabels[round] || `Round ${round}`;
+  };
+
+  const transformMatchesToBracket = (matches: TournamentMatchResponse[]): BracketRound[] => {
+    if (!matches || matches.length === 0) return [];
+
+    const grouped = new Map<number, BracketRound["matches"]>();
+
+    matches.forEach((match) => {
+      const roundMatches = grouped.get(match.round) || [];
+      roundMatches.push({
+        match: match.match_number,
+        team1: match.team1?.name || "TBD",
+        team2: match.team2?.name || "TBD",
+        score:
+          match.score_team1 !== null && match.score_team2 !== null
+            ? `${match.score_team1}-${match.score_team2}`
+            : "-",
+        winner:
+          match.winner?.name ||
+          (match.status === "completed" ? "Menunggu konfirmasi" : "Belum dimainkan"),
+      });
+      grouped.set(match.round, roundMatches);
+    });
+
+    return Array.from(grouped.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([round, matchesInRound]) => ({
+        round: getRoundLabel(round),
+        matches: matchesInRound.slice().sort((a, b) => a.match - b.match),
+      }));
+  };
+
+  const participantStatusConfig: Record<
+    string,
+    { label: string; classes: string }
+  > = {
+    registered: {
+      label: "Terdaftar",
+      classes: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    },
+    checked_in: {
+      label: "Check-in",
+      classes: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    eliminated: {
+      label: "Tersingkir",
+      classes: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    },
+    withdrawn: {
+      label: "Mengundurkan diri",
+      classes: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    },
+  };
+
+  const getParticipantStatusChip = (status: string) => {
+    return (
+      participantStatusConfig[status] || {
+        label: status || "Tidak diketahui",
+        classes: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+      }
+    );
+  };
+
   // State untuk tab aktif
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -101,86 +212,117 @@ export default function TournamentDetailPage() {
     }
   };
 
-  // Check registration status using API
-  useEffect(() => {
-    if (session?.user && tournamentId) {
-      checkRegistrationStatus();
-    }
-  }, [session, tournamentId]);
-
-  // Fetch tournament data dari API
-  useEffect(() => {
+  const fetchTournamentData = useCallback(async () => {
     if (!tournamentId) {
       console.error('Tournament ID is missing');
       setIsLoadingTournament(false);
       return;
     }
 
-    const fetchTournamentData = async () => {
-      try {
-        setIsLoadingTournament(true);
-        console.log('Fetching tournament:', tournamentId);
-        
-        // Fetch tournament dari API route with cache-busting timestamp
-        const timestamp = Date.now();
-        const response = await fetch(`/api/tournaments/${tournamentId}?t=${timestamp}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        });
-        
-        console.log('API response status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Error fetching tournament:', errorData.error || 'Failed to fetch tournament');
-          console.error('Response status:', response.status);
-          setTournament(null);
-          setIsLoadingTournament(false);
-          return;
-        }
+    try {
+      setIsLoadingTournament(true);
+      const timestamp = Date.now();
+      const response = await fetch(`/api/tournaments/${tournamentId}?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
 
-        const data = await response.json();
-        console.log('Tournament data received:', data);
-        const tournamentData = data.tournament;
-
-        if (!tournamentData) {
-          console.error('Tournament data is null in response');
-          setTournament(null);
-          setIsLoadingTournament(false);
-          return;
-        }
-
-        console.log('Setting tournament:', tournamentData.id, tournamentData.title);
-        console.log('Prize pool from API:', tournamentData.prize_pool, 'Currency:', tournamentData.currency);
-        setTournament(tournamentData);
-        
-        // Set participant count from API response
-        if (tournamentData.registeredCount !== undefined) {
-          setRegisteredCount(tournamentData.registeredCount);
-        } else {
-          setRegisteredCount(0);
-        }
-
-        // Set organizer from API response
-        if (tournamentData.organizer) {
-          setOrganizer(tournamentData.organizer);
-        }
-      } catch (error) {
-        console.error('Error fetching tournament data:', error);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error fetching tournament:', errorData.error || 'Failed to fetch tournament');
+        console.error('Response status:', response.status);
         setTournament(null);
-      } finally {
         setIsLoadingTournament(false);
+        return;
       }
-    };
 
-    fetchTournamentData();
+      const data = await response.json();
+      const tournamentData = data.tournament;
+
+      if (!tournamentData) {
+        console.error('Tournament data is null in response');
+        setTournament(null);
+        setIsLoadingTournament(false);
+        return;
+      }
+
+      setTournament(tournamentData);
+
+      if (tournamentData.registeredCount !== undefined) {
+        setRegisteredCount(tournamentData.registeredCount);
+      } else {
+        setRegisteredCount(0);
+      }
+
+      if (tournamentData.organizer) {
+        setOrganizer(tournamentData.organizer);
+      }
+    } catch (error) {
+      console.error('Error fetching tournament data:', error);
+      setTournament(null);
+    } finally {
+      setIsLoadingTournament(false);
+    }
+  }, [tournamentId]);
+
+  const fetchParticipants = useCallback(async () => {
+    if (!tournamentId) return;
+    setIsLoadingParticipants(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/participants?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch participants');
+      }
+
+      const data = await response.json();
+      const participantList: TournamentParticipant[] = data.participants || [];
+      setParticipants(participantList);
+      setRegisteredCount(participantList.length);
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      setParticipants([]);
+    } finally {
+      setIsLoadingParticipants(false);
+    }
+  }, [tournamentId]);
+
+  const fetchBracketMatches = useCallback(async () => {
+    if (!tournamentId) return;
+    setIsLoadingBracket(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournamentId}/matches?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bracket matches');
+      }
+
+      const data = await response.json();
+      const matches: TournamentMatchResponse[] = data.matches || [];
+      setBracketRounds(transformMatchesToBracket(matches));
+    } catch (error) {
+      console.error('Error fetching bracket matches:', error);
+      setBracketRounds([]);
+    } finally {
+      setIsLoadingBracket(false);
+    }
   }, [tournamentId]);
 
   // Fungsi untuk memeriksa status registrasi
-  const checkRegistrationStatus = async () => {
-    if (!session?.user) return;
+  const checkRegistrationStatus = useCallback(async () => {
+    if (!session?.user || !tournamentId) return;
     
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}/register/status`, {
@@ -195,7 +337,23 @@ export default function TournamentDetailPage() {
       console.error('Error checking registration status:', error);
       setIsRegistered(false);
     }
-  };
+  }, [session?.user, tournamentId]);
+
+  // Check registration status using API
+  useEffect(() => {
+    if (session?.user && tournamentId) {
+      checkRegistrationStatus();
+    }
+  }, [session, tournamentId, checkRegistrationStatus]);
+
+  useEffect(() => {
+    fetchTournamentData();
+  }, [fetchTournamentData]);
+
+  useEffect(() => {
+    fetchParticipants();
+    fetchBracketMatches();
+  }, [fetchParticipants, fetchBracketMatches]);
 
   // Fungsi untuk mendaftar turnamen
   const registerForTournament = async () => {
@@ -247,18 +405,8 @@ export default function TournamentDetailPage() {
 
       const data = await res.json();
       setIsRegistered(true);
-      
-      // Refresh tournament data to update participant count
-      const refreshRes = await fetch(`/api/tournaments/${tournamentId}?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        if (refreshData.tournament?.registeredCount !== undefined) {
-          setRegisteredCount(refreshData.tournament.registeredCount);
-        }
-      }
+      await fetchTournamentData();
+      await fetchParticipants();
       
       alert(data.message || 'Tim berhasil mendaftar untuk tournament!');
     } catch (error: any) {
@@ -290,18 +438,8 @@ export default function TournamentDetailPage() {
 
       const data = await res.json();
       setIsRegistered(false);
-      
-      // Refresh tournament data to update participant count
-      const refreshRes = await fetch(`/api/tournaments/${tournamentId}?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        if (refreshData.tournament?.registeredCount !== undefined) {
-          setRegisteredCount(refreshData.tournament.registeredCount);
-        }
-      }
+      await fetchTournamentData();
+      await fetchParticipants();
       
       alert(data.message || 'Pendaftaran berhasil dibatalkan!');
     } catch (error: any) {
@@ -681,7 +819,11 @@ export default function TournamentDetailPage() {
             <h2 className="text-xl font-bold mb-4">
               Tim Peserta ({registeredCount} / {tournament?.max_participants || 0})
             </h2>
-            {registeredCount === 0 ? (
+            {isLoadingParticipants ? (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500 dark:text-gray-400">Memuat daftar tim...</p>
+              </Card>
+            ) : participants.length === 0 ? (
               <Card className="p-6 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-2">Belum ada tim yang terdaftar untuk turnamen ini.</p>
                 {tournament?.registration_deadline && new Date(tournament.registration_deadline) > new Date() && (
@@ -691,12 +833,73 @@ export default function TournamentDetailPage() {
                 )}
               </Card>
             ) : (
-              <Card className="p-6">
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                  Daftar tim peserta akan ditampilkan di sini. ({registeredCount} tim terdaftar)
-                </p>
-                {/* TODO: Fetch dan tampilkan daftar tim dari tournament_participants */}
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {participants.map((participant) => {
+                  const statusChip = getParticipantStatusChip(participant.status);
+                  const teamInitial =
+                    participant.team?.name?.charAt(0)?.toUpperCase() || "T";
+                  return (
+                    <Card key={participant.team_id} className="p-4 flex items-center gap-4">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden bg-primary/15 text-primary font-bold flex items-center justify-center">
+                        {participant.team?.logo_url ? (
+                          <Image
+                            src={participant.team.logo_url}
+                            alt={participant.team.name || "Logo Tim"}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span>{teamInitial}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                              {participant.team?.name || "Tim Tidak Diketahui"}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {participant.team?.game || tournament?.game || "-"}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs ${statusChip.classes}`}>
+                            {statusChip.label}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                          {participant.seed !== null && participant.seed !== undefined && (
+                            <span className="font-medium text-gray-700 dark:text-gray-200">
+                              Seed #{participant.seed}
+                            </span>
+                          )}
+                          {participant.checked_in_at && (
+                            <span>
+                              Check-in:{" "}
+                              {new Date(participant.checked_in_at).toLocaleString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          )}
+                          {participant.registered_at && (
+                            <span>
+                              Terdaftar:{" "}
+                              {new Date(participant.registered_at).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -705,7 +908,19 @@ export default function TournamentDetailPage() {
         {activeTab === 'bracket' && (
           <div>
             <h2 className="text-xl font-bold mb-4">Bracket Turnamen</h2>
-            <TournamentBracket bracket={tournamentDetail.bracket} />
+            {isLoadingBracket ? (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500 dark:text-gray-400">Memuat bracket...</p>
+              </Card>
+            ) : bracketRounds.length === 0 ? (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500 dark:text-gray-400">
+                  Bracket belum tersedia. Tim akan muncul secara otomatis setelah jadwal pertandingan dibuat oleh panitia.
+                </p>
+              </Card>
+            ) : (
+              <TournamentBracket bracket={bracketRounds} />
+            )}
           </div>
         )}
 

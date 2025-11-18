@@ -407,7 +407,7 @@ export default function FAQPage() {
       )}
       
       {/* Bantuan Tambahan */}
-      <Card className="p-8 mt-12 bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+      <Card className="p-8 mt-12 bg-gradient-primary text-white">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold mb-2">Masih Butuh Bantuan?</h2>
           <p className="text-lg opacity-90">
