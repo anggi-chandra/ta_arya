@@ -224,7 +224,7 @@ export default async function HomePage() {
       </section>
 
       {/* Events Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <section className="py-20 bg-gradient-to-b from-[#050816] via-[#090f2a] to-[#0b112f] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in-up">
             <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4 animate-scale-in">
@@ -423,23 +423,23 @@ export default async function HomePage() {
 
       {/* Teams Section */}
       {teams.length > 0 && (
-        <section className="py-20 bg-white dark:bg-gray-800">
+        <section className="py-20 bg-gradient-to-b from-[#0b112f] via-[#070c22] to-[#050816] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4">
+              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-primary text-sm font-medium mb-4">
                 🏆 Komunitas Terbaik
               </div>
               <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
                 Tim & Komunitas Terdepan
               </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              <p className="text-xl text-white/70 max-w-3xl mx-auto">
                 Bergabunglah dengan komunitas esports terbesar di Indonesia dan temukan tim impianmu untuk berkompetisi di level tertinggi.
               </p>
             </div>
 
             <div className="mb-16">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Tim Esports Unggulan</h3>
+                <h3 className="text-2xl font-bold text-white">Tim Esports Unggulan</h3>
                 <Link href="/teams">
                   <Button variant="outline" className="hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600">
                     Lihat Semua Tim
@@ -450,7 +450,7 @@ export default async function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {teams.map((team: any) => (
                   <Link key={team.id} href={`/teams/${team.id}`}>
-                    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer">
+                  <Card className="overflow-hidden bg-[#101632]/70 border border-white/5 hover:border-primary/40 hover:shadow-primary/30 hover:shadow-2xl transition-all duration-300 group cursor-pointer">
                       <div className="relative h-32 bg-gradient-primary flex items-center justify-center">
                         {team.logo_url ? (
                           <Image
@@ -472,10 +472,10 @@ export default async function HomePage() {
                         )}
                       </div>
                       <div className="p-4">
-                        <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{team.name}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{team.description || `Tim ${team.game}`}</p>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">👥 {team.memberCount} Anggota</span>
+                        <h4 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors text-white">{team.name}</h4>
+                        <p className="text-sm text-white/70 mb-3 line-clamp-2">{team.description || `Tim ${team.game}`}</p>
+                        <div className="flex items-center justify-between text-sm text-white/60">
+                          <span>👥 {team.memberCount} Anggota</span>
                           <span className="text-primary font-semibold">{team.game}</span>
                         </div>
                       </div>
