@@ -230,7 +230,7 @@ export default function AdminTicketsPage() {
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     const previousStatus =
       ticketStatuses[ticketId] ??
-      data?.tickets.find((t) => t.id === ticketId)?.status ||
+      data?.tickets.find((t) => t.id === ticketId)?.status ??
       (selectedTicket?.id === ticketId ? selectedTicket.status : undefined);
 
     setTicketStatuses((prev) => ({
