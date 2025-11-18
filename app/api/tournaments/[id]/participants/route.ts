@@ -35,7 +35,7 @@ export async function GET(
         )
       `)
       .eq('tournament_id', tournamentId)
-      .order('seed', { ascending: true, nullsLast: true })
+      .order('seed', { ascending: true })
       .order('registered_at', { ascending: true })
 
     if (error) {
