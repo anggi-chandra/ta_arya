@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getSupabaseClient } from "@/lib/auth";
+import { getPlatformStats } from "@/lib/stats";
+import { formatStatCount } from "@/lib/format";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -84,58 +86,10 @@ async function getTeams() {
   }
 }
 
-async function getStats() {
-  try {
-    const supabase = getSupabaseClient();
-    
-    // Get total users
-    const { count: userCount } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true });
-
-    // Get total teams
-    const { count: teamCount } = await supabase
-      .from('teams')
-      .select('id', { count: 'exact', head: true });
-
-    // Get completed events
-    const now = new Date().toISOString();
-    const { count: completedEventsCount } = await supabase
-      .from('events')
-      .select('id', { count: 'exact', head: true })
-      .lt('ends_at', now);
-
-    return {
-      users: userCount || 0,
-      teams: teamCount || 0,
-      completedEvents: completedEventsCount || 0
-    };
-  } catch (error) {
-    console.error('Error in getStats:', error);
-    return {
-      users: 0,
-      teams: 0,
-      completedEvents: 0
-    };
-  }
-}
-
-function formatStatCount(count: number) {
-  if (count >= 1_000_000) {
-    const value = count / 1_000_000;
-    return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}M`;
-  }
-  if (count >= 1_000) {
-    const value = count / 1_000;
-    return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}K`;
-  }
-  return count.toLocaleString("id-ID");
-}
-
 export default async function HomePage() {
   const events = await getEvents();
   const teams = await getTeams();
-  const stats = await getStats();
+  const stats = await getPlatformStats();
 
   // Get featured event (first upcoming event or most recent)
   const featuredEvent = events.find((e: any) => {
@@ -169,7 +123,7 @@ export default async function HomePage() {
             <source src="/hero-video-2.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/20"></div>
         </div>
         
@@ -224,7 +178,13 @@ export default async function HomePage() {
       </section>
 
       {/* Events Section */}
-      <section className="py-20 bg-gradient-to-b from-[#050816] via-[#090f2a] to-[#0b112f] text-white">
+      <section className="relative py-20 text-white space-y-20 overflow-hidden">
+        <div className="absolute inset-0 bg-[#050816]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,transparent_45%)] opacity-40"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(220,38,38,0.15)_0%,transparent_55%)] opacity-60"></div>
+        <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-br from-transparent via-red-900/20 to-transparent blur-3xl"></div>
+        <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-tl from-transparent via-red-800/15 to-transparent blur-2xl"></div>
+        <div className="relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in-up">
             <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4 animate-scale-in">
@@ -356,7 +316,11 @@ export default async function HomePage() {
                 }
 
                 return (
-                  <Card key={event.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 group card-hover animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <Card
+                    key={event.id}
+                    className="overflow-hidden bg-white/5 border border-white/10 hover:border-red-400/60 text-white transition-all duration-300 group card-hover backdrop-blur-sm animate-fade-in-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
                     {event.image_url && (
                       <div className="relative h-48 bg-gradient-primary overflow-hidden">
                         <Image
@@ -365,30 +329,30 @@ export default async function HomePage() {
                           fill
                           className="object-cover"
                         />
-                        <div className="absolute top-4 right-4 bg-white/90 text-primary px-3 py-1 rounded-full text-sm font-bold">
+                        <div className="absolute top-4 right-4 bg-white/90 text-primary px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                           {event.game || 'Event'}
                         </div>
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
                       </div>
                     )}
                     <div className="p-6">
-                      <h3 className="font-bold text-xl mb-3 group-hover:text-primary transition-colors line-clamp-2">{event.title}</h3>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm">
+                      <h3 className="font-bold text-xl mb-3 group-hover:text-primary transition-colors line-clamp-2 text-white">{event.title}</h3>
+                      <div className="space-y-2 mb-4 text-sm text-white/70">
+                        <div className="flex items-center">
                           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                           </svg>
                           <span>{dateStr}</span>
                         </div>
                         {event.location && (
-                          <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm">
+                          <div className="flex items-center">
                             <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                             </svg>
                             <span>{event.location}</span>
                           </div>
                         )}
-                        <div className="flex items-center text-green-600 font-semibold text-sm">
+                        <div className="flex items-center text-red-400 font-semibold">
                           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                           </svg>
@@ -396,7 +360,9 @@ export default async function HomePage() {
                         </div>
                       </div>
                       <Link href={`/events/${event.id}`}>
-                        <Button className="w-full group-hover:bg-primary transition-colors">Daftar Event</Button>
+                        <Button className="w-full group-hover:bg-primary transition-colors bg-primary text-primary-foreground hover:bg-primary/90 border border-white/20">
+                          Daftar Event
+                        </Button>
                       </Link>
                     </div>
                   </Card>
@@ -419,11 +385,8 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
-      </section>
 
-      {/* Teams Section */}
       {teams.length > 0 && (
-        <section className="py-20 bg-gradient-to-b from-[#0b112f] via-[#070c22] to-[#050816] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-primary text-sm font-medium mb-4">
@@ -485,23 +448,24 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
+        )}
+          </div>
         </section>
-      )}
 
       {/* CTA Section */}
-      <section className="relative py-20 bg-gradient-primary text-white overflow-hidden">
+      <section className="relative py-20 bg-gradient-to-br from-[#1a0505] via-[#2b0202] to-[#050000] text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:60px_60px]"></div>
         </div>
         
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6">
+            <div className="inline-flex items-center px-4 py-2 bg-white/15 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6">
               🚀 Bergabung Sekarang
             </div>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-red-300">
               Siap Menjadi
-              <span className="block text-primary">
+              <span className="block text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
                 Esports Legend?
               </span>
             </h2>

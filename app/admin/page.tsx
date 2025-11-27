@@ -2,75 +2,13 @@
 
 import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
-import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Home, UserCog, Gamepad2, MessageSquare, Ticket } from "lucide-react";
+import { Users, Calendar, Trophy, ShieldCheck, FileText, Settings, Gamepad2, MessageSquare, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
-const quickActions = [
-  { 
-    name: "Kelola Pengguna", 
-    href: "/admin/users", 
-    icon: UserCog,
-    description: "Kelola data pengguna dan peran"
-  },
-  { 
-    name: "Kelola Event", 
-    href: "/admin/events", 
-    icon: Calendar,
-    description: "Kelola event dan kegiatan"
-  },
-  { 
-    name: "Permintaan Event", 
-    href: "/admin/event-requests", 
-    icon: Calendar,
-    description: "Kelola permintaan event dari user"
-  },
-  { 
-    name: "Pembelian Tiket", 
-    href: "/admin/tickets", 
-    icon: Ticket,
-    description: "Kelola pembelian tiket dari user"
-  },
-  { 
-    name: "Kelola Turnamen", 
-    href: "/admin/tournaments", 
-    icon: Trophy,
-    description: "Kelola turnamen dan kompetisi"
-  },
-  { 
-    name: "Kelola Tim", 
-    href: "/admin/teams", 
-    icon: Gamepad2,
-    description: "Kelola tim dan anggota"
-  },
-  { 
-    name: "Manajemen Konten", 
-    href: "/admin/content", 
-    icon: FileText,
-    description: "Kelola konten dan artikel"
-  },
-  { 
-    name: "Kelola Forum", 
-    href: "/admin/forum", 
-    icon: MessageSquare,
-    description: "Kelola forum posts dan diskusi"
-  },
-  { 
-    name: "Pengaturan", 
-    href: "/admin/settings", 
-    icon: Settings,
-    description: "Pengaturan sistem"
-  },
-  { 
-    name: "Kembali ke Beranda", 
-    href: "/", 
-    icon: Home,
-    description: "Kembali ke halaman utama"
-  },
-];
 
 async function fetchStats() {
   try {
@@ -148,52 +86,7 @@ function AdminDashboardContent() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      {/* Sidebar - Quick Actions Table */}
-      <div className="w-full lg:w-80 flex-shrink-0">
-        <Card className="p-4 lg:sticky lg:top-6">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-            Aksi Cepat
-          </h2>
-          <div className="space-y-2">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              // Check if current path matches the action href (exact match or starts with for nested routes)
-              const isActive = pathname === action.href || 
-                (action.href !== "/" && pathname?.startsWith(action.href));
-              
-              return (
-                <Link key={action.href} href={action.href}>
-                  <div
-                    className={`
-                      p-3 rounded-lg border transition-colors cursor-pointer
-                      ${isActive
-                        ? "bg-primary/10 border-primary text-primary dark:bg-primary/20"
-                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                      }
-                    `}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Icon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${isActive ? "text-primary" : "text-gray-500 dark:text-gray-400"}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm ${isActive ? "text-primary" : "text-gray-900 dark:text-white"}`}>
-                          {action.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {action.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0 space-y-8">
         <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
           Admin Dashboard
         </h1>
@@ -301,7 +194,6 @@ function AdminDashboardContent() {
             </div>
           </Card>
         </div>
-      </div>
     </div>
   );
 }
@@ -310,43 +202,23 @@ function AdminDashboardContent() {
 const AdminDashboardClient = dynamic(() => Promise.resolve(AdminDashboardContent), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="w-full lg:w-80 flex-shrink-0">
-        <Card className="p-4 lg:sticky lg:top-6">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-            Aksi Cepat
-          </h2>
-          <div className="space-y-2">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link key={action.href} href={action.href}>
-                  <div className="p-3 rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <div className="flex items-start gap-3">
-                      <Icon className="h-5 w-5 mt-0.5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white">
-                          {action.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {action.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-      <div className="flex-1 min-w-0">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-          Admin Dashboard
-        </h1>
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          Memuat...
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="animate-pulse space-y-3">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
         </div>
+      </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, idx) => (
+          <Card key={idx} className="p-5 h-full">
+            <div className="animate-pulse space-y-3">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   ),

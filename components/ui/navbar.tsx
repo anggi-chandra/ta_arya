@@ -10,7 +10,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 const navLinks = [
-  { name: "Beranda", href: "/" },
+  { name: "Beranda", href: "/home" },
   { name: "Event", href: "/events" },
   { name: "Komunitas", href: "/community" },
   { name: "Turnamen", href: "/tournaments" },
@@ -42,7 +42,7 @@ export function Navbar() {
   // Update pathname after mount and on navigation
   useEffect(() => {
     setMounted(true);
-    
+
     const updatePathname = () => {
       if (typeof window !== "undefined") {
         const currentPath = window.location.pathname;
@@ -71,10 +71,10 @@ export function Navbar() {
     };
 
     window.addEventListener("popstate", handlePopState);
-    
+
     // Check periodically for route changes (Next.js Link doesn't always trigger popstate)
     const interval = setInterval(checkPathname, 150);
-    
+
     // Also listen to route changes via Next.js router
     // For App Router, we need to track navigation manually
     const handleRouteChange = () => {
@@ -119,7 +119,7 @@ export function Navbar() {
   async function loadNotifications() {
     try {
       setLoadingNotifs(true);
-      const res = await fetch("/api/notifications", { 
+      const res = await fetch("/api/notifications", {
         method: "GET",
         credentials: "include"
       });
@@ -184,35 +184,35 @@ export function Navbar() {
   const handleSignOut = async () => {
     try {
       // Sign out without redirect to avoid NEXTAUTH_URL issues
-      await signOut({ 
-        redirect: false 
+      await signOut({
+        redirect: false
       });
       // Use window.location to ensure we use the current origin (not NEXTAUTH_URL)
       // This prevents redirect to localhost:3001 or other incorrect URLs
-      window.location.href = "/login";
+      window.location.href = "/";
     } catch (error) {
       console.error("Error signing out:", error);
-      // Fallback: redirect to login anyway using current origin
-      window.location.href = "/login";
+      // Fallback: redirect to landing page anyway using current origin
+      window.location.href = "/";
     }
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-[1000] pointer-events-auto shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 animate-fade-in-down">
+    <nav className="sticky top-0 z-[1000] pointer-events-auto shadow-lg backdrop-blur-xl bg-gradient-to-br from-[#050505]/95 via-[#120000]/90 to-[#050000]/95 border-b border-red-900/40 animate-fade-in-down">
       <div className="w-full">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Left: Brand */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <Link href="/" className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-all duration-300 hover:scale-105 pl-2 sm:pl-4 md:pl-6">
-              <Image 
-                src="/logo.png" 
-                alt="Bagoes Esports Logo" 
-                width={36} 
-                height={36} 
+            <Link href="/home" className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-all duration-300 hover:scale-105 pl-2 sm:pl-4 md:pl-6">
+              <Image
+                src="/logo.png"
+                alt="Bagoes Esports Logo"
+                width={36}
+                height={36}
                 className="object-contain w-8 h-8 md:w-10 md:h-10 transition-transform duration-300 hover:rotate-12"
                 priority
               />
-              <span className="text-xl md:text-2xl font-bold text-primary whitespace-nowrap hover:text-primary-end transition-colors duration-300">
+              <span className="text-xl md:text-2xl font-bold text-white whitespace-nowrap hover:text-primary transition-colors duration-300">
                 Bagoes Esports
               </span>
             </Link>
@@ -227,8 +227,8 @@ export function Navbar() {
                 className={cn(
                   "inline-flex items-center px-3 md:px-4 py-2 border-b-2 text-sm md:text-base font-medium transition-all duration-300 hover:scale-105",
                   pathname === link.href || (pathname && pathname.startsWith(`${link.href}/`))
-                    ? "border-primary text-primary dark:text-primary hover:border-primary-end"
-                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 dark:text-gray-300 dark:hover:text-gray-100 hover:text-primary",
+                    ? "border-red-500 text-red-400 hover:border-red-300"
+                    : "border-transparent text-white/70 hover:text-white hover:border-red-900/40",
                   link.name === "Kontak" && "relative z-[1001]"
                 )}
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -243,7 +243,7 @@ export function Navbar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none transition-colors"
+              className="lg:hidden p-2 rounded-lg hover:bg-white/10 focus:outline-none transition-colors text-white"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -266,9 +266,9 @@ export function Navbar() {
                       loadNotifications();
                     }
                   }}
-                  className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none transition-colors hidden lg:flex"
+                  className="relative p-2 rounded-full hover:bg-white/10 focus:outline-none transition-colors hidden lg:flex text-white"
                 >
-                  <Bell className="h-5 w-5 md:h-6 md:w-6 text-gray-700 dark:text-gray-300" />
+                  <Bell className="h-5 w-5 md:h-6 md:w-6" />
                   {notifItems.filter((n) => !n.is_read).length > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full bg-red-600 text-white min-w-[18px]">
                       {notifItems.filter((n) => !n.is_read).length}
@@ -282,75 +282,75 @@ export function Navbar() {
                     setDropdownOpen(!dropdownOpen);
                     if (!dropdownOpen) setNotificationsOpen(false);
                   }}
-                  className="hidden lg:flex items-center gap-2 text-base focus:outline-none hover:opacity-80 transition-opacity"
+                  className="hidden lg:flex items-center gap-2 text-base focus:outline-none hover:opacity-80 transition-opacity text-white"
                 >
-                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-primary text-white flex items-center justify-center text-sm md:text-base font-medium">
+                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-600 text-white flex items-center justify-center text-sm md:text-base font-medium">
                     {session?.user?.email?.[0]?.toUpperCase() || "U"}
                   </div>
-                  <span className="text-gray-700 dark:text-gray-300 text-sm md:text-base">
+                  <span className="text-white text-sm md:text-base">
                     {session?.user?.email?.split("@")[0] || "User"}
                   </span>
                 </button>
-                
+
                 {/* Notifications Dropdown */}
                 {notificationsOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50 border border-gray-200 dark:border-gray-700">
-                    <div className="px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifikasi</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Update terbaru untuk Anda</p>
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-[#0b0b0f]/95 rounded-lg shadow-2xl py-2 z-50 border border-red-900/40 backdrop-blur-lg">
+                    <div className="px-4 pb-2 border-b border-white/10">
+                      <h4 className="text-sm font-semibold text-white">Notifikasi</h4>
+                      <p className="text-xs text-white/60">Update terbaru untuk Anda</p>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
                       {loadingNotifs && (
-                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Memuat...</div>
+                        <div className="px-4 py-6 text-center text-sm text-white/60">Memuat...</div>
                       )}
                       {!loadingNotifs && notifItems.map((n) => (
-                        <Link 
-                          key={n.id} 
-                          href={n.action_url || "#"} 
-                          className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        <Link
+                          key={n.id}
+                          href={n.action_url || "#"}
+                          className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
                           onClick={() => setNotificationsOpen(false)}
                         >
                           <div className="mt-0.5 flex-shrink-0">{renderIcon(n.type)}</div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{n.title}</p>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{n.message}</p>
-                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{new Date(n.created_at).toLocaleString('id-ID')}</p>
+                            <p className="text-sm font-medium text-white truncate">{n.title}</p>
+                            <p className="text-xs text-white/70 line-clamp-2">{n.message}</p>
+                            <p className="text-[11px] text-white/40 mt-1">{new Date(n.created_at).toLocaleString('id-ID')}</p>
                           </div>
                         </Link>
                       ))}
                       {!loadingNotifs && notifItems.length === 0 && (
-                        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <div className="px-4 py-6 text-center text-sm text-white/60">
                           Tidak ada notifikasi.
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-between px-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between px-4 pt-2 border-t border-white/10">
                       <Button onClick={handleMarkAllRead} variant="ghost" size="sm" className="text-xs h-7">Tandai semua dibaca</Button>
-                      <Link href="/dashboard/notifications" className="text-xs text-primary px-2 py-1 hover:underline" onClick={() => setNotificationsOpen(false)}>Lihat semua</Link>
+                      <Link href="/dashboard/notifications" className="text-xs text-red-400 px-2 py-1 hover:underline" onClick={() => setNotificationsOpen(false)}>Lihat semua</Link>
                     </div>
                   </div>
                 )}
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 z-50 border border-gray-200 dark:border-gray-700">
-                    <Link 
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-[#0b0b0f]/95 rounded-lg shadow-2xl py-1 z-50 border border-red-900/40">
+                    <Link
                       href={isAdmin ? "/admin" : "/dashboard"}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center px-4 py-2 text-sm text-white hover:bg-white/5 transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <UserCircle className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
-                    <Link 
-                      href="/dashboard/profile" 
+                    <Link
+                      href="/dashboard/profile"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <User className="mr-2 h-4 w-4" />
                       Profil
                     </Link>
-                    <Link 
-                      href={isAdmin ? "/admin/settings" : "/dashboard/settings"} 
+                    <Link
+                      href={isAdmin ? "/admin/settings" : "/dashboard/settings"}
                       className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
@@ -383,9 +383,9 @@ export function Navbar() {
 
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
-          <div 
+          <div
             ref={mobileMenuRef}
-            className="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 animate-fade-in-down"
+            className="lg:hidden border-t border-red-900/40 bg-gradient-to-b from-[#050505] via-[#0b0000] to-[#020000] animate-fade-in-down"
           >
             <div className="px-4 py-3 space-y-1">
               {navLinks.map((link) => (
@@ -396,14 +396,14 @@ export function Navbar() {
                   className={cn(
                     "block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200",
                     pathname === link.href || (pathname && pathname.startsWith(`${link.href}/`))
-                      ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary border-l-4 border-primary"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary"
+                      ? "bg-red-600/20 text-red-400 border-l-4 border-red-500"
+                      : "text-white/80 hover:bg-white/10"
                   )}
                 >
                   {link.name}
                 </Link>
               ))}
-              
+
               {/* Auth Section for Mobile */}
               {status === "authenticated" ? (
                 <>

@@ -4,12 +4,14 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  
+
   // Define public paths that don't require authentication
   // Hanya login, register, dan API auth yang public
-  const isPublicPath = 
-    path === "/login" || 
-    path === "/register" || 
+  const isPublicPath =
+    path === "/login" ||
+    path === "/register" ||
+    path === "/" ||
+    path === "/home" ||
     path.startsWith("/api/auth") ||
     path.startsWith("/_next") ||
     path.startsWith("/favicon.ico");
@@ -44,7 +46,7 @@ export async function middleware(req: NextRequest) {
       }
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
-    
+
     // Allow access to public paths
     return NextResponse.next();
   }
@@ -59,7 +61,7 @@ export async function middleware(req: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     // Untuk halaman web, redirect ke login dengan callbackUrl
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", path);

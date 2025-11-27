@@ -13,16 +13,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Color Palette: Jade (text), Biru Dongker & Merah (gradient) */
-    /* Jade #00a86b = hsl(158, 100%, 33%) - untuk text penting */
-    /* Biru Dongker #1e1b4b = hsl(248, 47%, 18%) - untuk gradient start */
-    /* Merah #dc2626 = hsl(0, 70%, 51%) - untuk gradient end */
-    --primary: 158 100% 33%; /* Jade untuk text penting */
+    /* Color Palette: Merah Dominan */
+    /* Merah Gelap #b91c1c = hsl(0, 72%, 42%) - gradient start */
+    /* Merah Terang #dc2626 = hsl(0, 70%, 51%) - text & gradient end */
+    --primary: 0 70% 51%; /* Merah untuk elemen utama */
     --primary-foreground: 0 0% 100%;
     
-    /* Gradient colors - Biru Dongker ke Merah */
-    --primary-start: 248 47% 18%; /* Biru Dongker #1e1b4b */
-    --primary-end: 0 70% 51%; /* Merah #dc2626 */
+    /* Gradient colors - Merah gelap ke merah terang */
+    --primary-start: 0 72% 42%; /* Merah gelap #b91c1c */
+    --primary-end: 0 70% 51%; /* Merah terang #dc2626 */
 
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
@@ -30,7 +29,7 @@
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
 
-    --accent: 158 100% 33%; /* Jade untuk accent */
+    --accent: 0 70% 51%; /* Merah untuk accent */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -38,7 +37,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 158 100% 33%; /* Jade ring */
+    --ring: 0 70% 51%; /* Merah ring */
 
     --radius: 0.5rem;
   }
@@ -55,16 +54,15 @@
     --popover: 220 35% 10%;
     --popover-foreground: 210 40% 98%;
 
-    /* Color Palette: Jade (text), Biru Dongker & Merah (gradient) - Dark Mode */
-    /* Jade #00a86b = hsl(158, 100%, 33%) - untuk text penting */
-    /* Biru Dongker #1e1b4b = hsl(248, 47%, 18%) - untuk gradient start */
-    /* Merah #dc2626 = hsl(0, 70%, 51%) - untuk gradient end */
-    --primary: 158 100% 33%; /* Jade untuk text penting */
+    /* Color Palette: Merah Dominan - Dark Mode */
+    /* Merah Gelap #b91c1c = hsl(0, 72%, 42%) */
+    /* Merah Terang #dc2626 = hsl(0, 70%, 51%) */
+    --primary: 0 70% 51%; /* Merah untuk text penting */
     --primary-foreground: 0 0% 100%;
     
-    /* Gradient colors - Biru Dongker ke Merah */
-    --primary-start: 248 47% 18%; /* Biru Dongker #1e1b4b */
-    --primary-end: 0 70% 51%; /* Merah #dc2626 */
+    /* Gradient colors - Merah gelap ke merah terang */
+    --primary-start: 0 72% 42%; /* Merah gelap #b91c1c */
+    --primary-end: 0 70% 51%; /* Merah terang #dc2626 */
 
     --secondary: 220 30% 14%;
     --secondary-foreground: 210 40% 98%;
@@ -72,7 +70,7 @@
     --muted: 220 30% 14%;
     --muted-foreground: 220 10% 65%;
 
-    --accent: 158 100% 33%; /* Jade untuk accent */
+    --accent: 0 70% 51%; /* Merah untuk accent */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 35%;
@@ -80,7 +78,7 @@
 
     --border: 220 28% 18%;
     --input: 220 28% 18%;
-    --ring: 158 100% 33%; /* Jade ring */
+    --ring: 0 70% 51%; /* Merah ring */
   }
 }
 
