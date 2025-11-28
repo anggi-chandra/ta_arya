@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const isStaticAsset = path.includes(".");
 
   // Define public paths that don't require authentication
   // Hanya login, register, dan API auth yang public
@@ -36,7 +37,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirect logic untuk public paths
-  if (isPublicPath) {
+  if (isPublicPath || isStaticAsset) {
     // If user is on login/register page but already authenticated, redirect based on role
     if ((path === "/login" || path === "/register") && isAuthenticated) {
       const roles = await getUserRoles(token?.sub as string | undefined);
