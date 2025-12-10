@@ -18,11 +18,28 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const validateEmail = (email: string) => {
+    const gmailTypos = ["gmal.com", "gmil.com", "gail.com", "gmai.com", "gmali.com", "gmaill.com", "gamil.com"];
+    const domain = email.split("@")[1];
+
+    if (gmailTypos.includes(domain)) {
+      return "Apakah maksud anda gmail.com? Silakan periksa kembali email anda.";
+    }
+    return null;
+  };
+
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
     setSuccess("");
+
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      setIsLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setIsLoading(false);
@@ -128,104 +145,104 @@ export default function Register() {
               Bergabung dengan ekosistem esports profesional
             </p>
           </div>
-        
-        {success && (
-          <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded mb-4 text-sm">
-            {success}
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-500/15 border border-red-500/40 text-red-200 px-4 py-3 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
-        
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white/80">Nama Lengkap</label>
-            <div className="relative">
-              <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+
+          {success && (
+            <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded mb-4 text-sm">
+              {success}
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-500/15 border border-red-500/40 text-red-200 px-4 py-3 rounded mb-4 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white/80">Nama Lengkap</label>
+              <div className="relative">
+                <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  placeholder="Nama lengkap anda"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white/80">Email</label>
+              <div className="relative">
+                <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="email"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white/80">Password</label>
+              <div className="relative">
+                <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="password"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  placeholder="Minimal 6 karakter"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white/80">Konfirmasi Password</label>
+              <div className="relative">
+                <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="password"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  placeholder="Masukkan password kembali"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 text-sm text-white/70">
               <input
-                type="text"
-                className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                placeholder="Nama lengkap anda"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                id="terms"
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent"
                 required
               />
+              <label htmlFor="terms">
+                Saya setuju dengan{" "}
+                <Link href="/terms" className="text-primary hover:underline">
+                  syarat dan ketentuan
+                </Link>{" "}
+                serta kebijakan privasi Bagoes Esports.
+              </label>
             </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white/80">Email</label>
-            <div className="relative">
-              <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="email"
-                className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white/80">Password</label>
-            <div className="relative">
-              <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="password"
-                className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                placeholder="Minimal 6 karakter"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1 text-white/80">Konfirmasi Password</label>
-            <div className="relative">
-              <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                type="password"
-                className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                placeholder="Masukkan password kembali"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-3 text-sm text-white/70">
-            <input
-              id="terms"
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent"
-              required
-            />
-            <label htmlFor="terms">
-              Saya setuju dengan{" "}
-              <Link href="/terms" className="text-primary hover:underline">
-                syarat dan ketentuan
-              </Link>{" "}
-              serta kebijakan privasi Bagoes Esports.
-            </label>
-          </div>
-          
-          <Button
-            type="submit"
-            className="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90"
-            disabled={isLoading}
-          >
-            {isLoading ? "Memproses..." : "Daftar"}
-          </Button>
-        </form>
+
+            <Button
+              type="submit"
+              className="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90"
+              disabled={isLoading}
+            >
+              {isLoading ? "Memproses..." : "Daftar"}
+            </Button>
+          </form>
         </Card>
       </div>
     </div>
