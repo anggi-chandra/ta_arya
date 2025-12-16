@@ -11,6 +11,8 @@ export async function middleware(req: NextRequest) {
   const isPublicPath =
     path === "/login" ||
     path === "/register" ||
+    path === "/forgot-password" ||
+    path === "/reset-password" ||
     path === "/" ||
     path === "/home" ||
     path.startsWith("/api/auth") ||

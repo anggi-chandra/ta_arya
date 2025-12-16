@@ -58,10 +58,13 @@ export default function AdminEventRequestsPage() {
     ],
     queryFn: async (): Promise<EventRequestsResponse> => {
       const params = new URLSearchParams({
-        status,
         page: String(page),
         limit: String(limit),
       });
+      // Only add status param if it's not empty (empty means "all statuses")
+      if (status && status !== '') {
+        params.append('status', status);
+      }
       const res = await fetch(`/api/admin/event-requests?${params.toString()}`);
       if (!res.ok) throw new Error("Gagal memuat permintaan event");
       return res.json();

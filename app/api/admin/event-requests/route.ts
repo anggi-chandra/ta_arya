@@ -22,13 +22,16 @@ export const GET = withModeratorAuth(async (req: NextRequest, user: any) => {
     let query = supabase
       .from('event_requests')
       .select('*', { count: 'exact' })
-      .range(offset, offset + limit - 1)
       .order('requested_at', { ascending: false });
 
-    // Add status filter
-    if (status) {
+    // Add status filter only if status is provided and not empty
+    // If status is empty or "all", show all statuses
+    if (status && status !== '' && status !== 'all') {
       query = query.eq('status', status);
     }
+
+    // Apply pagination after filtering
+    query = query.range(offset, offset + limit - 1);
 
     const { data: eventRequests, error: requestsError, count } = await query;
 

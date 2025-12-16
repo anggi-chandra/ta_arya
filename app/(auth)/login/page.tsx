@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import LogoImg from "@/public/logo.png";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, LogIn, Github, Linkedin } from "lucide-react";
+import { Mail, Lock, LogIn, Github, Linkedin, Eye, EyeOff } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -17,19 +17,40 @@ function LoginForm() {
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
+
+  // Load saved email from localStorage on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    
+    // Save or remove email based on remember me
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
+    
     try {
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
+        // Pass remember me preference to NextAuth
+        callbackUrl: callbackUrl || "/dashboard",
       });
 
       if (result?.error) {
@@ -63,14 +84,26 @@ function LoginForm() {
       setIsLoading(false);
     }
   };
-  
-  const handleSocialLogin = (provider: string) => {
+
+  const handleSocialLogin = async (provider: string) => {
     setIsLoading(true);
-    // Simulasi proses login dengan provider
-    setTimeout(() => {
+    setError("");
+    try {
+      const result = await signIn(provider, {
+        callbackUrl: callbackUrl || "/dashboard",
+        redirect: true,
+      });
+      
+      // Jika redirect: true, kode ini tidak akan dieksekusi
+      // Tapi jika ada error, kita bisa handle di sini
+      if (result?.error) {
+        setError(`Gagal login dengan ${provider}. Silakan coba lagi.`);
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setError(`Terjadi kesalahan saat login dengan ${provider}.`);
       setIsLoading(false);
-      setSuccess(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -88,7 +121,7 @@ function LoginForm() {
             />
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-white/70 mb-2">
-                Bagoes Esports 
+                Bagoes Esports
               </p>
               <h1 className="text-4xl font-black leading-snug">
                 Welcome Back to{" "}
@@ -139,19 +172,19 @@ function LoginForm() {
               </Link>
             </p>
           </div>
-        
+
           {success && (
             <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded mb-4 text-sm">
               Login berhasil! Mengalihkan...
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-500/15 border border-red-500/40 text-red-200 px-4 py-3 rounded mb-4 text-sm">
               {error}
             </div>
           )}
-          
+
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium mb-1 text-white/80">Email</label>
@@ -167,32 +200,49 @@ function LoginForm() {
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-1 text-white/80">Password</label>
               <div className="relative">
                 <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                 <input
-                  type="password"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/60"
                   placeholder="Masukkan password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-white/60">
-              <label className="inline-flex items-center gap-2">
-                <input type="checkbox" className="rounded border-white/20 bg-transparent" />
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="rounded border-white/20 bg-transparent cursor-pointer" 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 Remember me
               </label>
               <Link href="/forgot-password" className="text-primary hover:underline">
                 Lupa password?
               </Link>
             </div>
-            
+
             <Button
               type="submit"
               className="w-full bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
@@ -204,7 +254,7 @@ function LoginForm() {
               </span>
             </Button>
           </form>
-          
+
           <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -223,14 +273,6 @@ function LoginForm() {
                 onClick={() => handleSocialLogin("google")}
               >
                 <Mail className="h-4 w-4 mr-2" /> Google
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-                onClick={() => handleSocialLogin("linkedin")}
-              >
-                <Linkedin className="h-4 w-4 mr-2" /> LinkedIn
               </Button>
             </div>
           </div>
