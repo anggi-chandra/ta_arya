@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, LogIn, Github, Linkedin, Eye, EyeOff } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 function LoginForm() {
@@ -18,6 +18,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
@@ -58,26 +59,49 @@ function LoginForm() {
         return;
       }
 
-      // Ambil role user untuk menentukan redirect
-      const res = await fetch("/api/auth/me");
-      const data = await res.json().catch(() => ({}));
-
-      setIsLoading(false);
+      // Login berhasil
       setSuccess(true);
+      setRedirecting(true);
+      setIsLoading(false);
 
-      // Jika ada callbackUrl, redirect ke sana
-      if (callbackUrl) {
-        router.push(callbackUrl);
-        return;
+      // Polling untuk memastikan session ter-setup
+      let sessionReady = false;
+      let attempts = 0;
+      const maxAttempts = 15; // Max 3 detik (15 * 200ms)
+
+      while (!sessionReady && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const session = await getSession();
+        if (session) {
+          sessionReady = true;
+          break;
+        }
+        attempts++;
       }
 
-      // Jika tidak ada callbackUrl, redirect berdasarkan role
-      const roles: string[] = data?.roles || [];
-      if (roles.includes("admin") || roles.includes("moderator")) {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
+      // Tentukan destination
+      let destination = callbackUrl || "/dashboard";
+
+      // Coba ambil role jika session ready
+      if (sessionReady) {
+        try {
+          const res = await fetch("/api/auth/me", {
+            cache: 'no-store',
+            credentials: 'include'
+          });
+          const data = await res.json().catch(() => ({}));
+          const roles: string[] = data?.roles || [];
+          
+          if (!callbackUrl && (roles.includes("admin") || roles.includes("moderator"))) {
+            destination = "/admin";
+          }
+        } catch (err) {
+          // Ignore error, gunakan default
+        }
       }
+
+      // Hard redirect
+      window.location.href = destination;
     } catch (err) {
       setError("Terjadi kesalahan saat login.");
       setIsLoading(false);
@@ -176,7 +200,7 @@ function LoginForm() {
 
           {success && (
             <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-4 py-3 rounded mb-4 text-sm">
-              Login berhasil! Mengalihkan...
+              {redirecting ? "Login berhasil! Mengalihkan..." : "Login berhasil!"}
             </div>
           )}
 
