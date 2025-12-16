@@ -4,7 +4,6 @@ import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import LogoImg from "@/public/logo.png";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, LogIn, Github, Linkedin, Eye, EyeOff } from "lucide-react";
@@ -114,8 +113,10 @@ function LoginForm() {
           <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30 pointer-events-none" />
           <div className="relative z-10 space-y-6">
             <Image
-              src={LogoImg}
+              src="/logo.png"
               alt="Bagoes Esports"
+              width={200}
+              height={200}
               className="h-32 w-auto drop-shadow-2xl"
               priority
             />

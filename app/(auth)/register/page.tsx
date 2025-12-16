@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { User, Mail, Lock, Eye, EyeOff, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import LogoImg from "@/public/logo.png";
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -97,8 +96,10 @@ export default function Register() {
           <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-transparent to-black/40 pointer-events-none" />
           <div className="relative z-10 space-y-6">
             <Image
-              src={LogoImg}
+              src="/logo.png"
               alt="Bagoes Esports"
+              width={200}
+              height={200}
               className="h-28 w-auto drop-shadow-2xl"
               priority
             />
