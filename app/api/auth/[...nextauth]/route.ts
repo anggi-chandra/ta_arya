@@ -11,6 +11,8 @@ const credentialsSchema = z.object({
 });
 
 const authOptions = {
+  // Ensure correct base URL for production
+  trustHost: true, // Trust Vercel's host
   session: { 
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days (default, can be extended with remember me)
@@ -314,7 +316,8 @@ const authOptions = {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+        domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
         // Max age 30 days for remember me functionality
         maxAge: 30 * 24 * 60 * 60, // 30 days
       },

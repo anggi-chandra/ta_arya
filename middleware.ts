@@ -20,7 +20,10 @@ export async function middleware(req: NextRequest) {
     path.startsWith("/favicon.ico");
 
   // Get the token and check if the user is authenticated
-  const token = await getToken({ req });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET 
+  });
   const isAuthenticated = !!token;
 
   // Helper: cek role user via Supabase
