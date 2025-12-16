@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useRef, useEffect } from "react";
+import { ReactNode, useRef, useEffect, createElement } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -29,7 +29,7 @@ export function GSAPWrapper({
   className = "",
   as: Component = "div",
 }: GSAPWrapperProps) {
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const element = ref.current;
@@ -159,10 +159,10 @@ export function GSAPWrapper({
     };
   }, [animation, duration, delay, stagger, scrollTrigger]);
 
-  return (
-    <Component ref={ref} className={className}>
-      {children}
-    </Component>
+  return createElement(
+    Component,
+    { ref, className },
+    children
   );
 }
 
