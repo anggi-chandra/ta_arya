@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { User, LogOut, Settings, UserCircle, Bell, Calendar, CheckCircle, CreditCard, Menu, X } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 const navLinks = [
   { name: "Beranda", href: "/home" },
@@ -21,15 +21,9 @@ const navLinks = [
 
 export function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.email === "admin@esportshub.local";
-  const [pathname, setPathname] = useState<string>(() => {
-    // Get initial pathname from window if available
-    if (typeof window !== "undefined") {
-      return window.location.pathname;
-    }
-    return "/";
-  });
   const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,68 +33,9 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Update pathname after mount and on navigation
   useEffect(() => {
     setMounted(true);
-
-    const updatePathname = () => {
-      if (typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
-        setPathname(currentPath);
-      }
-    };
-
-    // Initial update
-    updatePathname();
-
-    // Listen for navigation events
-    const handlePopState = () => {
-      updatePathname();
-    };
-
-    // Check for pathname changes (for Next.js client-side navigation)
-    let lastPathname = pathname;
-    const checkPathname = () => {
-      if (typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
-        if (currentPath !== lastPathname) {
-          lastPathname = currentPath;
-          setPathname(currentPath);
-        }
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    // Check periodically for route changes (Next.js Link doesn't always trigger popstate)
-    const interval = setInterval(checkPathname, 150);
-
-    // Also listen to route changes via Next.js router
-    // For App Router, we need to track navigation manually
-    const handleRouteChange = () => {
-      setTimeout(updatePathname, 50);
-    };
-
-    // Intercept Link clicks to update pathname immediately
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]');
-      if (link && (link as HTMLAnchorElement).href.startsWith(window.location.origin)) {
-        const href = (link as HTMLAnchorElement).getAttribute('href');
-        if (href && href !== pathname) {
-          setTimeout(() => setPathname(href), 0);
-        }
-      }
-    };
-
-    document.addEventListener("click", handleClick);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      document.removeEventListener("click", handleClick);
-      clearInterval(interval);
-    };
-  }, []); // Empty deps - only run on mount
+  }, []);
 
   // Map notification type to icon
   function renderIcon(type: string) {

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getPlatformStats } from "@/lib/stats";
 import { formatStatCount } from "@/lib/format";
+import { GSAPWrapper } from "@/components/animations/GSAPWrapper";
+import { GSAPButtonSetup } from "@/components/animations/GSAPButtonSetup";
 
 export default async function LandingPage() {
     const stats = await getPlatformStats();
@@ -33,7 +35,7 @@ export default async function LandingPage() {
             </div>
 
             {/* Content Overlay */}
-            <div className="relative z-10 text-center px-4 max-w-5xl mx-auto animate-fade-in-up">
+            <GSAPWrapper animation="fadeInUp" duration={1} delay={0.2} scrollTrigger={false} className="relative z-10 text-center px-4 max-w-5xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-6xl md:text-8xl font-black text-white mb-4 tracking-tight drop-shadow-2xl">
                         BAGOES <span className="text-red-500">ESPORTS</span>
@@ -43,18 +45,20 @@ export default async function LandingPage() {
                     </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-12">
+                <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.4} scrollTrigger={false} className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-12">
                     <Link href="/login">
                         <Button
                             size="lg"
-                            className="bg-red-600 hover:bg-red-700 text-white px-12 py-8 text-2xl font-bold rounded-full shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:shadow-[0_0_50px_rgba(220,38,38,0.8)] hover:scale-105 transition-all duration-300 border-2 border-red-500/60"
+                            className="bg-red-600 hover:bg-red-700 text-white px-12 py-8 text-2xl font-bold rounded-full shadow-[0_0_30px_rgba(220,38,38,0.5)] border-2 border-red-500/60"
+                            id="login-button"
                         >
                             MASUK
                         </Button>
                     </Link>
-                </div>
+                    <GSAPButtonSetup buttonId="login-button" hoverScale={1.05} glowColor="rgba(220, 38, 38, 0.8)" />
+                </GSAPWrapper>
 
-                <div className="mt-24 flex flex-wrap gap-12 justify-center text-white/70 text-sm font-medium tracking-widest uppercase">
+                <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.6} stagger={0.15} scrollTrigger={false} className="mt-24 flex flex-wrap gap-12 justify-center text-white/70 text-sm font-medium tracking-widest uppercase">
                     <div className="flex flex-col items-center gap-2">
                         <span className="text-2xl font-bold text-white">
                             {stats.users > 0 ? `${formatStatCount(stats.users)}+` : "0"}
@@ -75,8 +79,8 @@ export default async function LandingPage() {
                         </span>
                         <span>Tim Terdaftar</span>
                     </div>
-                </div>
-            </div>
+                </GSAPWrapper>
+            </GSAPWrapper>
 
             {/* Footer minimal */}
             <div className="absolute bottom-8 text-white/40 text-xs tracking-widest">

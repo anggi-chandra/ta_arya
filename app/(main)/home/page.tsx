@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { getSupabaseClient } from "@/lib/auth";
 import { getPlatformStats } from "@/lib/stats";
 import { formatStatCount } from "@/lib/format";
+import { AnimatedHero } from "@/components/animations/AnimatedHero";
+import { GSAPWrapper } from "@/components/animations/GSAPWrapper";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -129,49 +131,13 @@ export default async function HomePage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="md:w-1/2 mb-10 md:mb-0 z-10 animate-fade-in-up">
-              <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6 shadow-lg border border-white/20 animate-fade-in-down">
-                🏆 Platform Esports #1 di Indonesia
-              </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-2xl animate-fade-in-up stagger-1">
-                <span className="text-white">Wujudkan Impian</span>
-                <span className="text-primary drop-shadow-lg"> Esports</span>
-                <span className="text-white"> Anda</span>
-              </h1>
-              <p className="text-xl mb-8 text-white/95 leading-relaxed drop-shadow-lg animate-fade-in-up stagger-2">
-                Bergabunglah dengan komunitas esports terbesar di Indonesia. Ikuti turnamen, bentuk tim impian, dan raih prestasi tertinggi dalam dunia gaming kompetitif.
-              </p>
-              <div className="flex flex-wrap gap-4 animate-fade-in-up stagger-3">
-                <Link href="/events">
-                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105">
-                    🎮 Jelajahi Event
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-3 text-lg font-semibold hover:scale-105">
-                    Daftar Sekarang
-                  </Button>
-                </Link>
-              </div>
-              
-              {/* Stats */}
-              <div className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/20 animate-fade-in-up stagger-4">
-                <div className="text-center hover:scale-110 transition-transform duration-300">
-                  <div className="text-3xl font-bold text-primary-start">
-                    {stats.users > 0 ? `${formatStatCount(stats.users)}+` : '0'}
-                  </div>
-                  <div className="text-sm text-gray-300">Pengguna Aktif</div>
-                </div>
-                <div className="text-center hover:scale-110 transition-transform duration-300">
-                  <div className="text-3xl font-bold text-primary-end">{stats.completedEvents}+</div>
-                  <div className="text-sm text-gray-300">Event Selesai</div>
-                </div>
-                <div className="text-center hover:scale-110 transition-transform duration-300">
-                  <div className="text-3xl font-bold text-gradient-primary bg-clip-text text-transparent">{stats.teams}+</div>
-                  <div className="text-sm text-gray-300">Tim Terdaftar</div>
-                </div>
-              </div>
-            </div>
+            <AnimatedHero 
+              formattedStats={{
+                users: stats.users > 0 ? `${formatStatCount(stats.users)}+` : "0",
+                teams: stats.teams > 0 ? `${formatStatCount(stats.teams)}+` : "0",
+                completedEvents: stats.completedEvents > 0 ? `${formatStatCount(stats.completedEvents)}+` : "0"
+              }} 
+            />
             
           </div>
         </div>
@@ -186,21 +152,21 @@ export default async function HomePage() {
         <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-tl from-transparent via-red-800/15 to-transparent blur-2xl"></div>
         <div className="relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 animate-fade-in-up">
-            <div className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4 animate-scale-in">
+          <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.2} className="text-center mb-16">
+            <GSAPWrapper animation="scaleIn" duration={0.5} delay={0.4} scrollTrigger={false} className="inline-flex items-center px-4 py-2 bg-primary-start/10 dark:bg-primary-start/20 rounded-full text-primary text-sm font-medium mb-4">
               🔥 Event Terpopuler
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary animate-fade-in-up stagger-1">
+            </GSAPWrapper>
+            <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.6} scrollTrigger={false} className="text-4xl md:text-5xl font-bold mb-6 text-primary">
               Event Terbaru & Terhangat
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto animate-fade-in-up stagger-2">
+            </GSAPWrapper>
+            <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.8} scrollTrigger={false} className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               Jangan lewatkan kesempatan emas untuk berkompetisi di turnamen esports terbesar dan meraih hadiah jutaan rupiah!
-            </p>
-          </div>
+            </GSAPWrapper>
+          </GSAPWrapper>
           
           {/* Featured Event */}
           {featuredEvent && (
-            <div className="mb-12 animate-fade-in-up stagger-3">
+            <GSAPWrapper animation="fadeInUp" duration={0.8} delay={0.2} stagger={0.1} className="mb-12">
               <Card className="overflow-hidden bg-gradient-primary text-white border-0 shadow-2xl card-hover hover-glow">
                 <div className="flex flex-col lg:flex-row">
                   <div className="lg:w-1/2 p-8 lg:p-12">
@@ -292,7 +258,7 @@ export default async function HomePage() {
                   </div>
                 </div>
               </Card>
-            </div>
+            </GSAPWrapper>
           )}
           
           {/* Other Events Grid */}
