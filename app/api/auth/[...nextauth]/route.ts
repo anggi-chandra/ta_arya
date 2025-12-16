@@ -13,7 +13,7 @@ const credentialsSchema = z.object({
 const authOptions = {
   // Ensure correct base URL for production
   trustHost: true, // Trust Vercel's host
-  session: { 
+  session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days (default, can be extended with remember me)
   },
@@ -67,10 +67,10 @@ const authOptions = {
       // Handle Google OAuth sign in - create/update user in Supabase
       if (account?.provider === "google") {
         console.log("[Google OAuth] Starting sign in process for:", user.email);
-        
+
         try {
           const supabase = getSupabaseClient();
-          
+
           if (!user.email) {
             console.error("[Google OAuth] Email is missing");
             return false;
@@ -79,20 +79,20 @@ const authOptions = {
           // Check if user exists in Supabase Auth by email
           let supabaseUserId = user.id;
           let userCreatedInSupabase = false;
-          
+
           // Try to use Supabase Admin API if available (requires SERVICE_ROLE_KEY)
           if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
             try {
               console.log("[Google OAuth] Attempting to use Supabase Admin API");
-              
+
               // Try to get user from Supabase Auth by email
               const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
-              
+
               if (listError) {
                 console.warn("[Google OAuth] Error listing users:", listError.message);
               } else {
                 const existingUser = existingUsers?.users?.find((u: any) => u.email === user.email);
-                
+
                 if (existingUser) {
                   // User exists in Supabase Auth, use their ID
                   supabaseUserId = existingUser.id;
@@ -170,7 +170,7 @@ const authOptions = {
             if (user.image && user.image !== existingProfile.avatar_url) {
               profileData.avatar_url = user.image;
             }
-            
+
             if (Object.keys(profileData).length > 0) {
               const { error: updateError } = await supabase
                 .from('profiles')
@@ -202,8 +202,8 @@ const authOptions = {
             console.log("[Google OAuth] Creating default user role");
             const { error: roleError } = await supabase
               .from('user_roles')
-              .insert({ 
-                user_id: supabaseUserId, 
+              .insert({
+                user_id: supabaseUserId,
                 role: 'user',
                 granted_at: new Date().toISOString(),
               });
@@ -321,19 +321,6 @@ const authOptions = {
     error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL,
-        // Max age 30 days for remember me functionality
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-      },
-    },
-  },
 };
 
 const handler = NextAuth(authOptions);
