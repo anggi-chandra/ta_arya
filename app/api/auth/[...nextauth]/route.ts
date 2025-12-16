@@ -250,6 +250,14 @@ const authOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Jika URL adalah relative, gunakan baseUrl
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Jika URL adalah absolute dan dalam domain yang sama, allow
+      if (url.startsWith(baseUrl)) return url;
+      // Default redirect ke dashboard
+      return `${baseUrl}/dashboard`;
+    },
   },
   events: {
     async signIn({ user }: { user?: any }) {
@@ -316,8 +324,7 @@ const authOptions = {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
-        domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle domain
+        secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL,
         // Max age 30 days for remember me functionality
         maxAge: 30 * 24 * 60 * 60, // 30 days
       },

@@ -57,51 +57,58 @@ function LoginForm() {
         return;
       }
 
-      // Login berhasil
+      // Login berhasil - tunggu session ter-set dengan polling
       setSuccess(true);
       setRedirecting(true);
-      setIsLoading(false);
+      
+      // Polling session sampai ter-set (max 5 detik)
+      let sessionReady = false;
+      let attempts = 0;
+      const maxAttempts = 25; // 5 detik (25 * 200ms)
 
-      // Tunggu sebentar untuk memastikan cookie ter-set
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      while (!sessionReady && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const session = await getSession();
+        if (session?.user) {
+          sessionReady = true;
+          break;
+        }
+        attempts++;
+      }
 
-      // Refresh session untuk memastikan ter-update
-      await getSession();
+      if (!sessionReady) {
+        setError("Session tidak ter-set. Silakan coba lagi.");
+        setRedirecting(false);
+        setIsLoading(false);
+        return;
+      }
 
-      // Tentukan destination berdasarkan role (abaikan callbackUrl)
+      // Fetch role untuk menentukan destination
       let destination = "/dashboard";
-
-      // Coba ambil role user
       try {
         const res = await fetch("/api/auth/me", {
           cache: 'no-store',
           credentials: 'include',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
         });
         
         if (res.ok) {
-          const data = await res.json().catch(() => ({}));
+          const data = await res.json();
           const roles: string[] = data?.roles || [];
-          
-          // Redirect berdasarkan role
           if (roles.includes("admin") || roles.includes("moderator")) {
             destination = "/admin";
-          } else {
-            destination = "/dashboard";
           }
         }
       } catch (err) {
-        // Jika error, tetap redirect ke dashboard
-        console.log("Could not fetch user roles, redirecting to dashboard");
+        console.log("Could not fetch roles, using default destination");
       }
 
-      // Hard redirect dengan full page reload untuk memastikan session ter-load
+      // Hard redirect dengan replace untuk menghindari history entry
+      setIsLoading(false);
       window.location.replace(destination);
     } catch (err) {
       setError("Terjadi kesalahan saat login.");
       setIsLoading(false);
+      setRedirecting(false);
     }
   };
 
