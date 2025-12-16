@@ -49,8 +49,6 @@ function LoginForm() {
         email,
         password,
         redirect: false,
-        // Pass remember me preference to NextAuth
-        callbackUrl: callbackUrl || "/dashboard",
       });
 
       if (result?.error) {
@@ -79,8 +77,8 @@ function LoginForm() {
         attempts++;
       }
 
-      // Tentukan destination
-      let destination = callbackUrl || "/dashboard";
+      // Tentukan destination berdasarkan role (abaikan callbackUrl)
+      let destination = "/dashboard";
 
       // Coba ambil role jika session ready
       if (sessionReady) {
@@ -92,11 +90,16 @@ function LoginForm() {
           const data = await res.json().catch(() => ({}));
           const roles: string[] = data?.roles || [];
           
-          if (!callbackUrl && (roles.includes("admin") || roles.includes("moderator"))) {
+          // Redirect berdasarkan role, bukan callbackUrl
+          if (roles.includes("admin") || roles.includes("moderator")) {
             destination = "/admin";
+          } else {
+            destination = "/dashboard";
           }
         } catch (err) {
-          // Ignore error, gunakan default
+          // Jika error, tetap redirect ke dashboard
+          console.log("Could not fetch user roles, redirecting to dashboard");
+          destination = "/dashboard";
         }
       }
 
