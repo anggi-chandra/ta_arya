@@ -45,66 +45,22 @@ function LoginForm() {
     }
     
     try {
+      // Gunakan redirect: true dan biarkan NextAuth handle session cookie
+      // NextAuth akan otomatis set cookie dan redirect
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl: "/dashboard", // Default, middleware akan redirect admin ke /admin
       });
 
+      // Jika redirect: true, kode ini tidak akan dieksekusi
+      // Tapi jika ada error, kita handle di sini
       if (result?.error) {
         setError("Email atau password salah.");
         setIsLoading(false);
         return;
       }
-
-      // Login berhasil - tunggu session ter-set dengan polling
-      setSuccess(true);
-      setRedirecting(true);
-      
-      // Polling session sampai ter-set (max 5 detik)
-      let sessionReady = false;
-      let attempts = 0;
-      const maxAttempts = 25; // 5 detik (25 * 200ms)
-
-      while (!sessionReady && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        const session = await getSession();
-        if (session?.user) {
-          sessionReady = true;
-          break;
-        }
-        attempts++;
-      }
-
-      if (!sessionReady) {
-        setError("Session tidak ter-set. Silakan coba lagi.");
-        setRedirecting(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch role untuk menentukan destination
-      let destination = "/dashboard";
-      try {
-        const res = await fetch("/api/auth/me", {
-          cache: 'no-store',
-          credentials: 'include',
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          const roles: string[] = data?.roles || [];
-          if (roles.includes("admin") || roles.includes("moderator")) {
-            destination = "/admin";
-          }
-        }
-      } catch (err) {
-        console.log("Could not fetch roles, using default destination");
-      }
-
-      // Hard redirect dengan replace untuk menghindari history entry
-      setIsLoading(false);
-      window.location.replace(destination);
     } catch (err) {
       setError("Terjadi kesalahan saat login.");
       setIsLoading(false);

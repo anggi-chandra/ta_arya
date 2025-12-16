@@ -252,7 +252,11 @@ const authOptions = {
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       // Jika URL adalah relative, gunakan baseUrl
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith("/")) {
+        // Biarkan middleware handle role-based redirect
+        // Redirect ke dashboard, middleware akan redirect admin ke /admin
+        return `${baseUrl}/dashboard`;
+      }
       // Jika URL adalah absolute dan dalam domain yang sama, allow
       if (url.startsWith(baseUrl)) return url;
       // Default redirect ke dashboard
