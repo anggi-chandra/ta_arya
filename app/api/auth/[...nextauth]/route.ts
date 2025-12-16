@@ -250,7 +250,7 @@ const authOptions = {
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       // Jika URL adalah relative, gunakan baseUrl
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Jika URL adalah absolute dan dalam domain yang sama, allow
